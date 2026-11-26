@@ -46,3 +46,23 @@ export function dataHoraSP(iso: string): string {
   const hora = new Intl.DateTimeFormat("pt-BR", { timeZone: TZ, hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
   return `${dia} às ${hora}`;
 }
+
+export function somarDias(d: string, n: number): string {
+  const [y, m, dd] = d.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, dd + n)).toISOString().slice(0, 10);
+}
+
+// Segunda-feira da semana de d
+export function segundaDe(d: string): string {
+  const [y, m, dd] = d.split("-").map(Number);
+  const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay();
+  return somarDias(d, w === 0 ? -6 : 1 - w);
+}
+
+export function diaSemanaLongo(d: string): string {
+  const [y, m, dd] = d.split("-").map(Number);
+  const nome = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, dd)));
+  return nome.charAt(0).toUpperCase() + nome.slice(1);
+}
+
+export const ehData = (d: string | undefined): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d);

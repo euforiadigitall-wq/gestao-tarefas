@@ -53,8 +53,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <nav className="mt-8 space-y-1" aria-label="Principal">
           <NavLink href="/hoje"><Sun size={17} /> Hoje</NavLink>
           <NavLink href="/historico"><History size={17} /> Histórico</NavLink>
-          <EmBreve icone={<KanbanSquare size={17} />} nome="Quadro" />
-          <EmBreve icone={<CalendarRange size={17} />} nome="Cronograma" />
+          <NavLink href="/quadro"><KanbanSquare size={17} /> Quadro</NavLink>
+          <NavLink href="/cronograma"><CalendarRange size={17} /> Cronograma</NavLink>
           <EmBreve icone={<Rocket size={17} />} nome="Lançamentos" />
           <EmBreve icone={<Users size={17} />} nome="Clientes" />
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
@@ -77,6 +77,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="md:hidden"><Logo compacto /></div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
+            <Link href="/quadro" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Quadro" title="Quadro">
+              <KanbanSquare size={16} />
+            </Link>
+            <Link href="/cronograma" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Cronograma" title="Cronograma">
+              <CalendarRange size={16} />
+            </Link>
             <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
               <History size={16} />
             </Link>
