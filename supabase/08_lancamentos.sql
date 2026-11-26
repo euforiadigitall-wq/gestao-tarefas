@@ -285,12 +285,12 @@ grant execute on all functions in schema gestao to authenticated, service_role;
 --     Papel, etapa e prazo são sugestões: ajuste o que não bater com o seu fluxo.
 
 insert into gestao.checklist_modelo (etapa, texto, papel, critico, ancora, dias_uteis, condicao, ordem) values
-  ('abertura_carrinho', 'Trocar o nome do grupo',                              'social', false, 'abertura',   0, null,                 1),
-  ('abertura_carrinho', 'Colocar o link de vendas na descrição do grupo',      'social', false, 'abertura',   0, null,                 2),
+  ('abertura_carrinho', 'Trocar o nome do grupo',                              'dev'   , false, 'abertura',   0, null,                 1),
+  ('abertura_carrinho', 'Colocar o link de vendas na descrição do grupo',      'dev'   , false, 'abertura',   0, null,                 2),
   ('vendas',            'Tirar do ar a página de vendas com desconto',         'dev',    true,  'fechamento', 0, 'promocao_explicita', 1),
-  ('vendas',            'Retirar o link de vendas da descrição do grupo',      'social', true,  'fechamento', 0, null,                 2),
+  ('vendas',            'Retirar o link de vendas da descrição do grupo',      'dev'   , true,  'fechamento', 0, null,                 2),
   ('pos_vendas',        'Desligar o gatilho do ManyChat',                      'dev',    true,  'fechamento', 1, null,                 1),
-  ('pos_vendas',        'Trocar o link da bio',                                'social', false, 'fechamento', 1, null,                 2),
+  ('pos_vendas',        'Trocar o link da bio',                                'dev'   , false, 'fechamento', 1, null,                 2),
   ('pos_vendas',        'Arquivar os posts do lançamento',                     'social', false, 'fechamento', 2, null,                 3)
 on conflict (etapa, texto) do nothing;
 
