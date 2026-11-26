@@ -4,6 +4,13 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLICAS = ["/login", "/esqueci", "/auth/callback"];
 
 export async function proxy(req: NextRequest) {
+  const faltando = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].filter((n) => !process.env[n]);
+  if (faltando.length) {
+    return new NextResponse(
+      `Configuração incompleta. Faltam na Vercel (Settings, Environment Variables): ${faltando.join(", ")}. Depois de criar, faça Redeploy.`,
+      { status: 500, headers: { "content-type": "text/plain; charset=utf-8" } },
+    );
+  }
   let res = NextResponse.next({ request: req });
 
   const supabase = createServerClient(
