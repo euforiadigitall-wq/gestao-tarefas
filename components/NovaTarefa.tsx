@@ -1,19 +1,27 @@
 "use client";
 
 import { Loader2, Plus, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
 import { LinksCampo, type ItemLink } from "@/components/LinksCampo";
+import { ddmm } from "@/lib/datas";
 import { PAPEIS_CLIENTE, type Area, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente,
-}: { admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[] }) {
-  const [aberto, setAberto] = useState(false);
+  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, prazoInicial, fecharHref,
+}: {
+  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[];
+  // Usados pela Agenda: abre já com o dia escolhido e volta para fecharHref ao terminar
+  prazoInicial?: string; fecharHref?: string;
+}) {
+  const router = useRouter();
+  const daAgenda = !!fecharHref;
+  const [aberto, setAberto] = useState(daAgenda);
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState("");
   const [titulo, setTitulo] = useState("");
-  const [prazo, setPrazo] = useState("");
+  const [prazo, setPrazo] = useState(prazoInicial ?? "");
   const [clienteId, setClienteId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [responsavelId, setResponsavelId] = useState(meuId);
@@ -41,8 +49,13 @@ export function NovaTarefa({
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
       setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({}); setDescricao(""); setLinks([]);
-      setAberto(false);
+      fechar();
     });
+  }
+
+  function fechar() {
+    if (fecharHref) router.push(fecharHref);
+    else setAberto(false);
   }
 
   if (!aberto) {
@@ -56,10 +69,10 @@ export function NovaTarefa({
   return (
     <form onSubmit={enviar} className="panel w-full space-y-4 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-medium">Nova tarefa</h2>
-        <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={() => setAberto(false)} aria-label="Fechar"><X size={16} /></button>
+        <h2 className="text-[15px] font-medium">{prazoInicial ? `Nova tarefa para ${ddmm(prazoInicial)}` : "Nova tarefa"}</h2>
+        <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={fechar} aria-label="Fechar"><X size={16} /></button>
       </div>
-      {admin && (
+      {admin && !daAgenda && (
         <div role="tablist" aria-label="Tipo de tarefa" className="inline-flex rounded-lg bg-panel2 p-1">
           {[{ v: false, n: "Tarefa simples" }, { v: true, n: "Peça com esteira" }].map((o) => (
             <button key={o.n} type="button" role="tab" aria-selected={esteira === o.v}
@@ -163,7 +176,7 @@ export function NovaTarefa({
       {esteira && <p className="text-xs text-tx3">Os prazos vêm do modelo, 1 dia útil por etapa. A primeira etapa já fica na vez de quem a executa.</p>}
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
       <div className="flex justify-end gap-2">
-        <button type="button" className="btn btn-ghost" onClick={() => setAberto(false)}>Cancelar</button>
+        <button type="button" className="btn btn-ghost" onClick={fechar}>Cancelar</button>
         <button type="submit" className="btn btn-primary" disabled={pendente}>
           {pendente && <Loader2 size={15} className="animate-spin" />} {esteira ? "Criar peça" : "Criar tarefa"}
         </button>

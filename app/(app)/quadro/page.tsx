@@ -46,7 +46,7 @@ export default async function Quadro({
   const areas = (areasRes.data ?? []) as Area[];
 
   const sp = await searchParams;
-  const agrupar = sp.agrupar === "cliente" ? "cliente" : "pessoa";
+  const agrupar = sp.agrupar === "cliente" || sp.agrupar === "etapa" ? sp.agrupar : "pessoa";
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
@@ -67,14 +67,31 @@ export default async function Quadro({
   const tarefas = (data ?? []) as unknown as Linha[];
   const hoje = hojeSP();
 
-  const colunas = new Map<string, { nome: string; itens: Linha[] }>();
+  const colunas = new Map<string, { nome: string; ordem: number; itens: Linha[] }>();
   for (const t of tarefas) {
-    const chave = agrupar === "pessoa" ? t.responsavel_id ?? "sem" : t.cliente_id ?? "interna";
-    const nome = agrupar === "pessoa" ? t.responsavel ?? "Sem responsável" : t.cliente ?? "Internas";
-    if (!colunas.has(chave)) colunas.set(chave, { nome, itens: [] });
-    colunas.get(chave)!.itens.push(t);
+    let chave: string;
+    let nome: string;
+    let ordem = 0;
+    if (agrupar === "pessoa") {
+      chave = t.responsavel_id ?? "sem";
+      nome = t.responsavel ?? "Sem responsável";
+    } else if (agrupar === "cliente") {
+      chave = t.cliente_id ?? "interna";
+      nome = t.cliente ?? "Internas";
+    } else {
+      // Etapa da esteira: onde cada peça está parada agora
+      const esteira = t.etapa_atual !== null && !!t.proxima_acao;
+      chave = esteira ? `${t.proxima_acao}` : "simples";
+      nome = esteira ? `${t.proxima_acao}` : "Tarefas simples";
+      ordem = esteira ? t.etapa_atual! : 999;
+    }
+    if (!colunas.has(chave)) colunas.set(chave, { nome, ordem, itens: [] });
+    const c = colunas.get(chave)!;
+    c.ordem = Math.min(c.ordem, ordem);
+    c.itens.push(t);
   }
-  const lista = Array.from(colunas.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const lista = Array.from(colunas.values()).sort((a, b) =>
+    agrupar === "etapa" ? a.ordem - b.ordem || a.nome.localeCompare(b.nome, "pt-BR") : a.nome.localeCompare(b.nome, "pt-BR"));
 
   return (
     <div>
@@ -98,7 +115,7 @@ export default async function Quadro({
       {lista.length === 0 && !error ? (
         <div className="panel mt-8 px-6 py-12 text-center">
           <p className="text-[15px] font-medium">Nada em andamento com esses filtros</p>
-          <p className="mt-1 text-sm text-tx2">Quando houver tarefas abertas, elas aparecem aqui, uma coluna por {agrupar === "pessoa" ? "pessoa" : "cliente"}.</p>
+          <p className="mt-1 text-sm text-tx2">Quando houver tarefas abertas, elas aparecem aqui, uma coluna por {agrupar === "pessoa" ? "pessoa" : agrupar === "cliente" ? "cliente" : "etapa da esteira"}.</p>
         </div>
       ) : (
         <div className="-mx-5 mt-8 overflow-x-auto px-5 pb-4 md:-mx-9 md:px-9">
@@ -118,13 +135,13 @@ export default async function Quadro({
                         <span className={`absolute inset-y-0 left-0 w-1 ${trilhoPrazo[prazo.tom]}`} aria-hidden="true" />
                         <h3 className="text-sm font-medium leading-snug">{t.titulo}</h3>
                         <p className="mt-1 text-xs text-tx2">
-                          {agrupar === "pessoa" ? (t.cliente ?? "Interna") : (t.responsavel ?? "Sem responsável")}
+                          {agrupar === "pessoa" ? (t.cliente ?? "Interna") : agrupar === "cliente" ? (t.responsavel ?? "Sem responsável") : `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`}
                           {t.area && <span className="mono text-tx3"> · {t.area}</span>}
                         </p>
                         {t.bloco && <p className="mono mt-1 text-[11px] text-tx3">{t.bloco}</p>}
                         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                           {t.etapa_atual !== null && <span className="chip bg-infobg text-info">{t.estado_atual}</span>}
-                          {t.proxima_acao && <span className="text-xs text-tx2">Próxima: <b className="font-medium text-tx">{t.proxima_acao}</b></span>}
+                          {t.proxima_acao && agrupar !== "etapa" && <span className="text-xs text-tx2">Próxima: <b className="font-medium text-tx">{t.proxima_acao}</b></span>}
                           <span className={`chip ml-auto ${corPrazo[prazo.tom]}`}>{prazo.texto}</span>
                         </div>
                       </article>

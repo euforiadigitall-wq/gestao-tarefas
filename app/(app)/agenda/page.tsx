@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
+import { NovaTarefa } from "@/components/NovaTarefa";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
 } from "@/lib/datas";
@@ -95,7 +96,7 @@ function Mini({ i }: { i: Item }) {
 
 export default async function Agenda({
   searchParams,
-}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string }> }) {
+}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   const meuId = auth.user!.id;
@@ -118,6 +119,7 @@ export default async function Agenda({
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
+  const nova = ehData(sp.nova) ? sp.nova : null;
   const dono = admin ? (pessoa !== "todas" ? pessoa : null) : meuId;
 
   // Intervalo que a visão precisa
@@ -183,7 +185,7 @@ export default async function Agenda({
   const porDia = (d: string) => itens.filter((i) => i.data === d);
 
   // Endereços que mantêm filtros e visão
-  const href = (novo: { visao?: Visao; data?: string }) => {
+  const href = (novo: { visao?: Visao; data?: string; nova?: string }) => {
     const p = new URLSearchParams();
     const v = novo.visao ?? visao;
     const d = novo.data ?? data;
@@ -192,6 +194,7 @@ export default async function Agenda({
     if (admin && pessoa !== "todas") p.set("pessoa", pessoa);
     if (cliente !== "todos") p.set("cliente", cliente);
     if (area !== "todas") p.set("area", area);
+    if (novo.nova) p.set("nova", novo.nova);
     const s = p.toString();
     return s ? `/agenda?${s}` : "/agenda";
   };
@@ -237,6 +240,13 @@ export default async function Agenda({
         </nav>
       </div>
 
+      {nova && (
+        <div className="mt-6">
+          <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
+            modelos={[]} papeisCliente={[]} prazoInicial={nova} fecharHref={href({})} />
+        </div>
+      )}
+
       {erro && (
         <p role="alert" className="mt-6 rounded-lg bg-dangerbg px-4 py-3 text-sm text-danger">
           Não consegui carregar a agenda agora. Atualize a página; se continuar, avise a Iza.
@@ -279,10 +289,14 @@ export default async function Agenda({
                 const fds = idx % 7 > 4;
                 const ehHoje = d === hoje;
                 return (
-                  <div key={d} className={`min-h-[116px] border-b border-r border-[var(--line)] p-1.5 ${fds ? "bg-panel2/60" : ""} ${fora ? "opacity-50" : ""}`}>
+                  <div key={d} className={`group relative min-h-[116px] border-b border-r border-[var(--line)] p-1.5 ${fds ? "bg-panel2/60" : ""} ${fora ? "opacity-50" : ""}`}>
                     <Link href={href({ visao: "dia", data: d })} aria-label={`Abrir ${diaSemanaLongo(d)}, ${ddmm(d)}`}
                       className={`mono mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs hover:bg-panel2 ${ehHoje ? "bg-[var(--gold)] font-medium text-white" : "text-tx2"}`}>
                       {diaDoMes(d)}
+                    </Link>
+                    <Link href={href({ nova: d })} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa"
+                      className="absolute right-1.5 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md text-tx2 opacity-0 transition-opacity hover:bg-panel2 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60">
+                      <Plus size={14} />
                     </Link>
                     <div className="space-y-1">
                       {doDia.slice(0, 3).map((i) => <Mini key={i.chave} i={i} />)}
@@ -307,7 +321,10 @@ export default async function Agenda({
               <section key={d} aria-label={`${diaSemanaLongo(d)}, ${ddmm(d)}`} className={`rounded-xl p-2.5 ${ehHoje ? "bg-goldbg/40 ring-1 ring-[var(--gold)]" : ""}`}>
                 <h2 className="mb-2.5 flex items-baseline justify-between px-0.5">
                   <Link href={href({ visao: "dia", data: d })} className={`text-sm font-medium hover:underline ${ehHoje ? "text-gold" : ""}`}>{diaSemanaLongo(d)}</Link>
-                  <span className="mono text-xs text-tx3">{ddmm(d)}</span>
+                  <span className="mono flex items-center gap-1.5 text-xs text-tx3">
+                    {ddmm(d)}
+                    <Link href={href({ nova: d })} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-tx2 hover:bg-panel2"><Plus size={14} /></Link>
+                  </span>
                 </h2>
                 <div className="space-y-2">
                   {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <CartaoItem key={i.chave} i={i} />)}
@@ -331,6 +348,9 @@ export default async function Agenda({
 
       {visao === "dia" && (
         <section className="mt-7" aria-label={`${diaSemanaLongo(data)}, ${ddmm(data)}`}>
+          <div className="mb-3 flex justify-end">
+            <Link href={href({ nova: data })} className="btn"><Plus size={15} /> Adicionar tarefa neste dia</Link>
+          </div>
           {porDia(data).length === 0 ? (
             <div className="panel px-6 py-10 text-center">
               <p className="text-[15px] font-medium">Nada marcado para este dia</p>

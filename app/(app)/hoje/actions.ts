@@ -9,6 +9,10 @@ export type NovoLink = { titulo: string; url: string };
 
 const MAX_DESCRICAO = 600;
 
+function revalidarTudo() {
+  for (const p of ["/hoje", "/agenda", "/quadro"]) revalidatePath(p);
+}
+
 function prepararLinks(links: NovoLink[] | undefined): { ok: { titulo: string; url: string }[] } | { erro: string } {
   const lista = links ?? [];
   if (lista.length > 20) return { erro: "Use no máximo 20 links por tarefa." };
@@ -128,9 +132,9 @@ export async function criarTarefa(dados: {
   if (error) return { erro: traduzir(error.message) };
   if (criada && links.ok.length > 0) {
     const { error: e2 } = await supabase.from("links").insert(links.ok.map((l) => ({ ...l, tarefa_id: criada.id, criado_por: auth.user!.id })));
-    if (e2) { revalidatePath("/hoje"); return { erro: "A tarefa foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }
+    if (e2) { revalidarTudo(); return { erro: "A tarefa foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }
   }
-  revalidatePath("/hoje");
+  revalidarTudo();
   return {};
 }
 
@@ -170,8 +174,8 @@ export async function criarTarefaEsteira(dados: {
   if (id && descricao) await supabase.from("tarefas").update({ notas: descricao }).eq("id", id as string);
   if (id && links.ok.length > 0) {
     const { error: e2 } = await supabase.from("links").insert(links.ok.map((l) => ({ ...l, tarefa_id: id as string, criado_por: auth.user!.id })));
-    if (e2) { revalidatePath("/hoje"); return { erro: "A peça foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }
+    if (e2) { revalidarTudo(); return { erro: "A peça foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }
   }
-  revalidatePath("/hoje");
+  revalidarTudo();
   return {};
 }

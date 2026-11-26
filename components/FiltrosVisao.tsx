@@ -38,6 +38,7 @@ export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, f
           <select id="v-agrupar" className="field !h-9 !w-auto min-w-[130px]" value={valores.agrupar} onChange={(e) => ir({ agrupar: e.target.value })}>
             <option value="pessoa">Pessoa</option>
             <option value="cliente">Cliente</option>
+            <option value="etapa">Etapa da esteira</option>
           </select>
         </div>
       )}
