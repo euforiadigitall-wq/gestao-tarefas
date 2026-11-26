@@ -38,6 +38,7 @@ export interface TarefaView {
   atrasada: boolean;
   bloco: string | null;
   notas: string | null;
+  etapas_total?: number;
   lancamentos?: EtiquetaLanc[] | null;
 }
 

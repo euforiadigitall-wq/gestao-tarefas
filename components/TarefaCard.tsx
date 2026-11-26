@@ -4,6 +4,7 @@ import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { Esteira } from "@/components/Esteira";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { LinksCampo } from "@/components/LinksCampo";
 import { descreverPrazo, type TomPrazo } from "@/lib/datas";
@@ -64,6 +65,12 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
               </>
             )}
           </p>
+          {esteira && (t.etapas_total ?? 0) > 1 && (
+            <p className="mt-2 flex items-center gap-2 text-xs text-tx2">
+              <Esteira atual={t.etapa_atual ?? 1} total={t.etapas_total ?? 1} nome={t.proxima_acao} />
+              <span>Etapa {t.etapa_atual} de {t.etapas_total}</span>
+            </p>
+          )}
         </div>
         <span className={`chip ${cores[prazo.tom]}`}>{prazo.texto}</span>
         <button type="button" className="btn btn-ghost !h-9 !w-9 !px-0" aria-expanded={detalhes} aria-label={detalhes ? "Fechar detalhes" : "Abrir detalhes"} title="Descrição e links" onClick={() => setDetalhes((v) => !v)}>

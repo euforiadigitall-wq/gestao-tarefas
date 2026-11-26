@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { CardQuadro } from "@/components/CardQuadro";
+import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
+import Link from "next/link";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { descreverPrazo, hojeSP } from "@/lib/datas";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
@@ -25,13 +27,14 @@ interface Linha {
   prazo_vez: string | null;
   bloco: string | null;
   lancamentos: EtiquetaLanc[] | null;
+  etapas_total: number;
 }
 
 const LIMITE = 500;
 
 export default async function Quadro({
   searchParams,
-}: { searchParams: Promise<{ pessoa?: string; cliente?: string; area?: string; agrupar?: string; lanc?: string }> }) {
+}: { searchParams: Promise<{ pessoa?: string; cliente?: string; area?: string; agrupar?: string; lanc?: string; visao?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
@@ -55,10 +58,22 @@ export default async function Quadro({
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
   const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
+  const lista_ = sp.visao === "lista";
+  const hrefVisao = (v: "colunas" | "lista") => {
+    const p = new URLSearchParams();
+    if (v === "lista") p.set("visao", "lista");
+    if (admin && pessoa !== "todas") p.set("pessoa", pessoa);
+    if (cliente !== "todos") p.set("cliente", cliente);
+    if (area !== "todas") p.set("area", area);
+    if (lanc !== "todos") p.set("lanc", lanc);
+    if (agrupar !== "pessoa") p.set("agrupar", agrupar);
+    const s = p.toString();
+    return s ? `/quadro?${s}` : "/quadro";
+  };
 
   let q = supabase
     .from("v_tarefas")
-    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,bloco,lancamentos")
+    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,bloco,lancamentos,etapas_total")
     .neq("status", "concluida")
     .is("arquivada_em", null)
     .order("prazo_vez", { ascending: true, nullsFirst: false })
@@ -104,9 +119,16 @@ export default async function Quadro({
       <p className="label">Tudo que está em andamento</p>
       <h1 className="mt-1.5 text-[30px] font-semibold leading-none tracking-tight">Quadro</h1>
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
         <FiltrosVisao base="/quadro" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
-          valores={{ pessoa, cliente, area, agrupar, lanc }} lancamentos={lancs} comAgrupar />
+          valores={{ pessoa, cliente, area, agrupar, lanc }} lancamentos={lancs} fixos={lista_ ? { visao: "lista" } : {}} comAgrupar />
+      
+        <div role="tablist" aria-label="Visão do quadro" className="inline-flex rounded-lg bg-panel2 p-1">
+          {([["colunas", "Colunas"], ["lista", "Lista"]] as const).map(([v, n]) => (
+            <Link key={v} role="tab" aria-selected={(v === "lista") === lista_} href={hrefVisao(v)}
+              className={`rounded-md px-3.5 py-1.5 text-[13px] transition-colors ${(v === "lista") === lista_ ? "bg-[var(--panel)] font-medium text-tx shadow-sm" : "text-tx2 hover:text-tx"}`}>{n}</Link>
+          ))}
+        </div>
       </div>
 
       {error && (
@@ -122,6 +144,22 @@ export default async function Quadro({
         <div className="panel mt-8 px-6 py-12 text-center">
           <p className="text-[15px] font-medium">Nada em andamento com esses filtros</p>
           <p className="mt-1 text-sm text-tx2">Quando houver tarefas abertas, elas aparecem aqui, uma coluna por {agrupar === "pessoa" ? "pessoa" : agrupar === "cliente" ? "cliente" : "etapa da esteira"}.</p>
+        </div>
+      ) : lista_ ? (
+        <div className="panel mt-8 overflow-hidden">
+          <CabecalhoLista />
+          <ul>
+            {tarefas.map((t) => {
+              const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
+              return (
+                <LinhaLista key={t.id} d={{
+                  chave: t.id, titulo: t.titulo, sub: `${t.cliente ?? "Interna"}${t.area ? ` · ${t.area}` : ""}`, lancamentos: t.lancamentos,
+                  etapa: t.etapa_atual, total: t.etapas_total, acao: t.proxima_acao, quem: t.responsavel,
+                  prazoTexto: prazo.texto, prazoClasse: corPrazo[prazo.tom],
+                }} />
+              );
+            })}
+          </ul>
         </div>
       ) : (
         <div className="-mx-5 mt-8 overflow-x-auto px-5 pb-4 md:-mx-9 md:px-9">
@@ -143,6 +181,7 @@ export default async function Quadro({
                         estado: t.etapa_atual !== null ? t.estado_atual : null,
                         proxima: t.proxima_acao && agrupar !== "etapa" ? t.proxima_acao : null,
                         prazoTexto: prazo.texto, prazoClasse: corPrazo[prazo.tom], trilho: trilhoPrazo[prazo.tom],
+                        etapa: t.etapa_atual, total: t.etapas_total, quem: t.responsavel,
                       }} />
                     );
 

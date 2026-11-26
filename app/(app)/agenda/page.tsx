@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
+import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import { ImportarExportar } from "@/components/ImportarExportar";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import {
@@ -17,11 +18,12 @@ import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/t
 export const metadata: Metadata = { title: "Agenda" };
 export const dynamic = "force-dynamic";
 
-type Visao = "mes" | "semana" | "dia";
+type Visao = "mes" | "semana" | "dia" | "lista";
 const VISOES: { id: Visao; nome: string }[] = [
   { id: "mes", nome: "Mês" },
   { id: "semana", nome: "Semana" },
   { id: "dia", nome: "Dia" },
+  { id: "lista", nome: "Lista" },
 ];
 const SEMANA_CURTA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
@@ -129,7 +131,7 @@ export default async function Agenda({
 
   const sp = await searchParams;
   const hoje = hojeSP();
-  const visao: Visao = sp.visao === "semana" || sp.visao === "dia" ? sp.visao : "mes";
+  const visao: Visao = sp.visao === "semana" || sp.visao === "dia" || sp.visao === "lista" ? sp.visao : "mes";
   const data = ehData(sp.data) ? sp.data : hoje;
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
@@ -141,7 +143,7 @@ export default async function Agenda({
   // Intervalo que a visão precisa
   let ini: string;
   let fim: string;
-  if (visao === "mes") {
+  if (visao === "mes" || visao === "lista") {
     ini = segundaDe(inicioMes(data));
     fim = domingoDe(fimMes(data));
   } else if (visao === "semana") {
@@ -220,10 +222,10 @@ export default async function Agenda({
     return s ? `/agenda?${s}` : "/agenda";
   };
 
-  const anterior = visao === "mes" ? somarMeses(data, -1) : somarDias(data, visao === "semana" ? -7 : -1);
-  const proximo = visao === "mes" ? somarMeses(data, 1) : somarDias(data, visao === "semana" ? 7 : 1);
-  const rotuloPeriodo = visao === "mes" ? rotuloMes(data) : visao === "semana" ? `${ddmm(ini)} a ${ddmm(fim)}` : dataExtensa(data);
-  const noPeriodoAtual = visao === "mes" ? inicioMes(data) === inicioMes(hoje) : visao === "semana" ? segundaDe(data) === segundaDe(hoje) : data === hoje;
+  const anterior = visao === "mes" || visao === "lista" ? somarMeses(data, -1) : somarDias(data, visao === "semana" ? -7 : -1);
+  const proximo = visao === "mes" || visao === "lista" ? somarMeses(data, 1) : somarDias(data, visao === "semana" ? 7 : 1);
+  const rotuloPeriodo = visao === "mes" || visao === "lista" ? rotuloMes(data) : visao === "semana" ? `${ddmm(ini)} a ${ddmm(fim)}` : dataExtensa(data);
+  const noPeriodoAtual = visao === "mes" || visao === "lista" ? inicioMes(data) === inicioMes(hoje) : visao === "semana" ? segundaDe(data) === segundaDe(hoje) : data === hoje;
 
   const fixos: Record<string, string> = {};
   if (visao !== "mes") fixos.visao = visao;
@@ -298,6 +300,26 @@ export default async function Agenda({
             <p className="mt-2 text-xs text-tx3">e mais {atrasadasRows.length - VISIVEIS_ATRASADAS}. Veja todas no <Link className="underline" href="/quadro">Quadro</Link>.</p>
           )}
         </section>
+      )}
+
+      {visao === "lista" && (
+        <div className="panel mt-7 overflow-hidden">
+          {itens.filter((i) => i.data).length === 0 ? (
+            <p className="px-6 py-10 text-center text-sm text-tx2">Nada com prazo neste mês.</p>
+          ) : (
+            <>
+              <CabecalhoLista />
+              <ul>
+                {itens.filter((i) => i.data).sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "")).map((i) => (
+                  <LinhaLista key={i.chave} d={{
+                    chave: i.chave, titulo: i.titulo, sub: `${i.cliente ?? "Interna"}${i.area ? ` · ${i.area}` : ""}`, lancamentos: i.lancamentos ?? null,
+                    etapa: null, total: 0, acao: i.rotulo, quem: i.quem, prazoTexto: ddmm(i.data!), prazoClasse: "bg-panel2 text-tx2", futuro: i.futuro,
+                  }} />
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
       )}
 
       {visao === "mes" && (

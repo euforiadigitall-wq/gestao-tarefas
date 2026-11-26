@@ -67,7 +67,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes, papeisRes, lancRes, itensRes] = await Promise.all([
     supabase
       .from("v_tarefas")
-      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos")
+      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos,etapas_total")
       .eq("responsavel_id", alvo)
       .neq("status", "concluida")
       .is("arquivada_em", null)

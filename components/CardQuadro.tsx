@@ -4,6 +4,7 @@ import { ChevronDown, ExternalLink } from "lucide-react";
 import { useState, useTransition } from "react";
 import { detalhesTarefa, type DetalheTarefa } from "@/app/(app)/acoes/actions";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
+import { Avatar, Esteira } from "@/components/Esteira";
 import { Etiquetas } from "@/components/Etiqueta";
 import { ddmm } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
@@ -21,6 +22,9 @@ export interface DadosCard {
   prazoTexto: string;
   prazoClasse: string;
   trilho: string;
+  etapa: number | null;
+  total: number;
+  quem: string | null;
 }
 
 // Card do Quadro: clique para abrir etapas, descrição e links.
@@ -46,10 +50,16 @@ export function CardQuadro({ d, admin }: { d: DadosCard; admin: boolean }) {
         {d.lancamentos && d.lancamentos.length > 0 && <span className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={d.lancamentos} /></span>}
         <span className="mt-1 block text-xs text-tx2">{d.linha}{d.area && <span className="mono text-tx3"> · {d.area}</span>}</span>
         {d.bloco && <span className="mono mt-1 block text-[11px] text-tx3">{d.bloco}</span>}
+        {d.etapa !== null && d.total > 1 && (
+          <span className="mt-2 flex items-center gap-2 text-xs text-tx2">
+            <Esteira atual={d.etapa} total={d.total} nome={d.proxima} />
+            <span>Etapa {d.etapa} de {d.total}</span>
+          </span>
+        )}
         <span className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {d.estado && <span className="chip bg-infobg text-info">{d.estado}</span>}
           {d.proxima && <span className="text-xs text-tx2">Próxima: <b className="font-medium text-tx">{d.proxima}</b></span>}
-          <span className={`chip ml-auto ${d.prazoClasse}`}>{d.prazoTexto}</span>
+          <span className="ml-auto flex items-center gap-2"><Avatar nome={d.quem} /><span className={`chip ${d.prazoClasse}`}>{d.prazoTexto}</span></span>
         </span>
       </button>
       {aberto && (
