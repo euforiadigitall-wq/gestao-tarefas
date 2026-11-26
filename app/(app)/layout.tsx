@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarRange, History, KanbanSquare, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
+import { CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
@@ -53,6 +53,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/agenda"><CalendarRange size={17} /> Agenda</NavLink>
           <NavLink href="/lancamentos"><Rocket size={17} /> Lançamentos</NavLink>
           <EmBreve icone={<Users size={17} />} nome="Clientes" />
+          {pessoa.papel === "admin" && <NavLink href="/recorrentes"><Repeat size={17} /> Recorrentes</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
         </nav>
