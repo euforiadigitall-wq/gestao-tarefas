@@ -1,0 +1,146 @@
+{
+  "_como_usar": "Três fluxos, um bloco por fluxo. Em cada um: apague os nós listados em 'apagar', cole os nós de 'colar', ligue como em 'ligar' e escolha a credencial Postgres do gestao_n8n nos nós novos. Não mexa no resto. Depois de trocar os três, o ClickUp deixa de receber esses comentários.",
+  "pesquisa_de_mercado_gpt": {
+    "fluxo": "Pesquisa de mercado · GPT (OpenAI)",
+    "apagar": [
+      "Comenta relatório",
+      "Comenta falha"
+    ],
+    "ligar": [
+      "Monta comentários > Comenta relatório",
+      "Ainda rodando? (saída 'falso') > Comenta falha"
+    ],
+    "colar": [
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select gestao.srv_comentar($1::uuid, $2, 'GPT (pesquisa de mercado)') as r",
+          "options": {
+            "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+          }
+        },
+        "id": "d1000000-0000-4000-8000-000000000001",
+        "name": "Comenta relatório",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          208,
+          0
+        ],
+        "notes": "Credencial: Postgres do usuário gestao_n8n."
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select gestao.srv_comentar($1::uuid, $2, 'GPT (pesquisa de mercado)') as r",
+          "options": {
+            "queryReplacement": "={{ [ $('Valida pedido').first().json.task_id, 'ROTINA: a pesquisa no GPT não terminou (status ' + $json.status + ($json.erro ? ': ' + $json.erro : '') + '). A consolidação vai usar só a pesquisa do Claude.' ] }}"
+          }
+        },
+        "id": "d1000000-0000-4000-8000-000000000002",
+        "name": "Comenta falha",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          208,
+          400
+        ],
+        "notes": "Credencial: Postgres do usuário gestao_n8n."
+      }
+    ]
+  },
+  "cria_pesquisa_de_audiencia_forms": {
+    "fluxo": "Arco e Página · Cria pesquisa de audiência (Forms)",
+    "apagar": [
+      "Comenta na tarefa"
+    ],
+    "ligar": [
+      "Resultado > Comenta na tarefa",
+      "Comenta na tarefa > Resposta"
+    ],
+    "colar": [
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select gestao.srv_comentar($1::uuid, $2, 'Formulário da pesquisa') as r",
+          "options": {
+            "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+          }
+        },
+        "id": "d1000000-0000-4000-8000-000000000003",
+        "name": "Comenta na tarefa",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          800,
+          0
+        ],
+        "notes": "Credencial: Postgres do usuário gestao_n8n."
+      }
+    ]
+  },
+  "pre_analise_do_diagnostico": {
+    "fluxo": "Arco · Pré-análise do diagnóstico (OpenAI)",
+    "apagar": [
+      "Tarefas abertas do onboarding",
+      "Acha tarefa Analisar diagnóstico",
+      "Comenta na tarefa"
+    ],
+    "ligar": [
+      "Grava no portal > Acha tarefa (gestão)  (ao lado da ligação que já existe para Destinatários)",
+      "Acha tarefa (gestão) > Monta comentário",
+      "Monta comentário > Comenta na tarefa"
+    ],
+    "colar": [
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select gestao.srv_achar_tarefa($1, true) as task_id",
+          "options": {
+            "queryReplacement": "={{ [ '[ARCO] ' + $('Busca respostas').first().json.cliente_nome + ' · Analisar diagnóstico' ] }}"
+          }
+        },
+        "id": "d1000000-0000-4000-8000-000000000004",
+        "name": "Acha tarefa (gestão)",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          800,
+          256
+        ],
+        "notes": "Credencial: Postgres do usuário gestao_n8n. Devolve o id da tarefa, ou vazio se não achar."
+      },
+      {
+        "parameters": {
+          "jsCode": "const id = $json.task_id;\nif (!id) return [];\nconst resp = $('Busca respostas').first().json.texto;\nconst pre = $('Extrai texto').first().json.texto;\nconst txt = `DIAGNÓSTICO ENVIADO PELO CLIENTE\\n\\n${resp}\\n\\n---\\n\\nPRÉ-ANÁLISE (IA, uso interno)\\n\\n${pre}`;\nreturn [{ json: { task_id: id, comment_text: txt.slice(0, 95000) } }];"
+        },
+        "id": "d1000000-0000-4000-8000-000000000005",
+        "name": "Monta comentário",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1008,
+          256
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "select gestao.srv_comentar($1::uuid, $2, 'Pré-análise do diagnóstico') as r",
+          "options": {
+            "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+          }
+        },
+        "id": "d1000000-0000-4000-8000-000000000006",
+        "name": "Comenta na tarefa",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.5,
+        "position": [
+          1200,
+          256
+        ],
+        "notes": "Credencial: Postgres do usuário gestao_n8n."
+      }
+    ]
+  }
+}
