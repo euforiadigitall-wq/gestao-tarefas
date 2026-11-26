@@ -269,7 +269,7 @@ export default async function Agenda({
       </div>
 
       {nova && (
-        <div className="mt-6">
+        <div>
           <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
             modelos={[]} papeisCliente={[]} lancamentos={lancs} prazoInicial={nova} fecharHref={href({})} />
         </div>

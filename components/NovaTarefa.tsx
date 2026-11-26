@@ -69,8 +69,8 @@ export function NovaTarefa({
     );
   }
 
-  return (
-    <form onSubmit={enviar} className="panel w-full space-y-4 p-5">
+  const formulario = (
+    <form onSubmit={enviar} className={daAgenda ? "min-h-full w-full space-y-4 bg-[var(--panel)] p-5" : "panel w-full space-y-4 p-5"}>
       <div className="flex items-center justify-between">
         <h2 className="text-[15px] font-medium">{prazoInicial ? `Nova tarefa para ${ddmm(prazoInicial)}` : "Nova tarefa"}</h2>
         <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={fechar} aria-label="Fechar"><X size={16} /></button>
@@ -205,4 +205,9 @@ export function NovaTarefa({
       </div>
     </form>
   );
+  return daAgenda ? (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onMouseDown={(e) => { if (e.target === e.currentTarget) fechar(); }} onKeyDown={(e) => { if (e.key === "Escape") fechar(); }}>
+      <aside role="dialog" aria-modal="true" aria-label="Nova tarefa" className="h-full w-full max-w-[480px] overflow-y-auto border-l border-[var(--line)] shadow-2xl">{formulario}</aside>
+    </div>
+  ) : formulario;
 }
