@@ -5,6 +5,7 @@ import { AdminAcessos } from "@/components/AdminAcessos";
 import { AdminClientes } from "@/components/AdminClientes";
 import { AdminPapeis } from "@/components/AdminPapeis";
 import { AdminPessoas } from "@/components/AdminPessoas";
+import { ReatribuirTarefas } from "@/components/ReatribuirTarefas";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Acesso, Area, ClienteAdmin, PapelCliente, PessoaAdmin } from "@/lib/tipos";
 
@@ -73,7 +74,12 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
       <div className="mt-6">
         {aba === "clientes" && <AdminClientes clientes={clientes} />}
-        {aba === "pessoas" && <AdminPessoas pessoas={pessoas} meuId={meuId} />}
+        {aba === "pessoas" && (
+          <>
+            <AdminPessoas pessoas={pessoas} meuId={meuId} />
+            <ReatribuirTarefas pessoas={pessoas.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
+          </>
+        )}
         {aba === "papeis" && <AdminPapeis clientes={clientes} pessoas={pessoas} papeis={papeis} />}
         {aba === "acessos" && (
           <AdminAcessos

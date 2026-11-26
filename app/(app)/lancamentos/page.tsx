@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ImportarExportar } from "@/components/ImportarExportar";
-import { NovoLancamento } from "@/components/NovoLancamento";
+import { NovoLancamento, type CopiaLancamento } from "@/components/NovoLancamento";
 import { Etiqueta } from "@/components/Etiqueta";
 import { ddmm, hojeSP } from "@/lib/datas";
 import { ETAPAS, etapaPelasDatas, nomeEtapa } from "@/lib/lancamentos";
@@ -64,7 +64,8 @@ function Cartao({ l, resumo, hoje }: { l: Lanc; resumo: { tarefas: number; atras
   );
 }
 
-export default async function Lancamentos() {
+export default async function Lancamentos({ searchParams }: { searchParams: Promise<{ copiar?: string }> }) {
+  const { copiar } = await searchParams;
   const supabase = await supabaseServer();
   const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
@@ -105,6 +106,22 @@ export default async function Lancamentos() {
     };
   }
 
+  let copia: CopiaLancamento | null = null;
+  if (admin && copiar && /^[0-9a-f-]{36}$/i.test(copiar)) {
+    const [oRes, pRes] = await Promise.all([
+      supabase.from("lancamentos").select("nome,cliente_id,cor,promocao_explicita,etapas:lancamento_etapas(etapa,ativa)").eq("id", copiar).maybeSingle(),
+      supabase.from("lancamento_papeis").select("papel,pessoa_id").eq("lancamento_id", copiar),
+    ]);
+    const o = oRes.data as { nome: string; cliente_id: string; cor: string; promocao_explicita: boolean; etapas: { etapa: string; ativa: boolean }[] } | null;
+    if (o) {
+      copia = {
+        clienteId: o.cliente_id, cor: o.cor, promocao: o.promocao_explicita, deNome: o.nome,
+        etapas: o.etapas.filter((e) => e.ativa).map((e) => e.etapa),
+        equipe: Object.fromEntries(((pRes.data ?? []) as { papel: string; pessoa_id: string | null }[]).filter((p) => p.pessoa_id).map((p) => [p.papel, p.pessoa_id as string])),
+      };
+    }
+  }
+
   const andamento = lancs.filter((l) => l.status !== "encerrado");
   const encerrados = lancs.filter((l) => l.status === "encerrado");
   const falhou = lancRes.error || itensRes.error || tlRes.error;
@@ -116,7 +133,7 @@ export default async function Lancamentos() {
           <p className="label">Cada lançamento tem o seu código</p>
           <h1 className="mt-1.5 text-[30px] font-semibold leading-none tracking-tight">Lançamentos</h1>
         </div>
-        {admin && <NovoLancamento clientes={(clientesRes.data ?? []) as Opcao[]} pessoas={(pessoasRes.data ?? []) as Opcao[]} />}
+        {admin && <NovoLancamento key={copiar ?? "novo"} copia={copia} clientes={(clientesRes.data ?? []) as Opcao[]} pessoas={(pessoasRes.data ?? []) as Opcao[]} />}
       </div>
 
       <div className="mt-4">

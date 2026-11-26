@@ -7,21 +7,23 @@ import { criarLancamento } from "@/app/(app)/lancamentos/actions";
 import { CORES_TAG, ETAPAS } from "@/lib/lancamentos";
 import { PAPEIS_CLIENTE, type Opcao } from "@/lib/tipos";
 
-export function NovoLancamento({ clientes, pessoas }: { clientes: Opcao[]; pessoas: Opcao[] }) {
+export interface CopiaLancamento { clienteId: string; cor: string; etapas: string[]; promocao: boolean; equipe: Record<string, string>; deNome: string }
+
+export function NovoLancamento({ clientes, pessoas, copia }: { clientes: Opcao[]; pessoas: Opcao[]; copia?: CopiaLancamento | null }) {
   const router = useRouter();
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(!!copia);
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState("");
-  const [clienteId, setClienteId] = useState("");
+  const [clienteId, setClienteId] = useState(copia?.clienteId ?? "");
   const [nome, setNome] = useState("");
   const [codigo, setCodigo] = useState("");
-  const [cor, setCor] = useState<string>("azul");
+  const [cor, setCor] = useState<string>(copia?.cor ?? "azul");
   const [ini, setIni] = useState("");
   const [abertura, setAbertura] = useState("");
   const [fim, setFim] = useState("");
-  const [etapas, setEtapas] = useState<string[]>(ETAPAS.map((e) => e.id));
-  const [promocao, setPromocao] = useState(false);
-  const [equipe, setEquipe] = useState<Record<string, string>>({});
+  const [etapas, setEtapas] = useState<string[]>(copia?.etapas ?? ETAPAS.map((e) => e.id));
+  const [promocao, setPromocao] = useState(copia?.promocao ?? false);
+  const [equipe, setEquipe] = useState<Record<string, string>>(copia?.equipe ?? {});
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +46,7 @@ export function NovoLancamento({ clientes, pessoas }: { clientes: Opcao[]; pesso
   return (
     <form onSubmit={enviar} className="panel w-full space-y-5 p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-[15px] font-medium">Novo lançamento</h2>
+        <h2 className="text-[15px] font-medium">{copia ? `Novo lançamento, copiado de ${copia.deNome}` : "Novo lançamento"}</h2>
         <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={() => setAberto(false)} aria-label="Fechar"><X size={16} /></button>
       </div>
 

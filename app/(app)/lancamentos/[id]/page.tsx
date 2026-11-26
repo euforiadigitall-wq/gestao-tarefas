@@ -167,6 +167,7 @@ export default async function PaginaLancamento({
       </div>
       <div className="mt-4 flex flex-wrap items-start gap-3">
         <ImportarExportar admin={admin} filtros={`lanc=${l.id}`} lancamentoId={l.id} />
+        {admin && <Link href={`/lancamentos?copiar=${l.id}`} className="btn">Copiar para um novo lançamento</Link>}
         {admin && <ExcluirLancamento tipo="lancamento" id={l.id} nome={l.nome} />}
       </div>
       <p className="mt-2 text-[14px] text-tx2">

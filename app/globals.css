@@ -3,7 +3,7 @@
 /* Tokens. Escuro e o padrao da marca tech; claro usa papel quente e azul-marinho. */
 :root {
   --bg: #f3f1ea;
-  --bg-grid: rgba(15, 27, 61, 0.07);
+  --bg-grid: rgba(15, 27, 61, 0.035);
   --glow: rgba(184, 137, 47, 0.14);
   --panel: #ffffff;
   --panel-2: #f8f6f0;
@@ -33,7 +33,7 @@
 
 [data-theme="dark"] {
   --bg: #080b14;
-  --bg-grid: rgba(255, 255, 255, 0.045);
+  --bg-grid: rgba(255, 255, 255, 0.022);
   --glow: rgba(233, 196, 106, 0.1);
   --panel: #0e1220;
   --panel-2: #131829;

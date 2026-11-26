@@ -171,3 +171,18 @@ export async function definirPapelParaTodos(papel: string, pessoaId: string): Pr
   revalidatePath("/admin");
   return { aviso: `Aplicado a ${linhas.length} clientes.` };
 }
+
+export async function reatribuirTarefas(de: string, para: string): Promise<Resultado & { quantidade?: number }> {
+  const ctx = await exigirAdmin();
+  if ("erro" in ctx) return ctx;
+  if (!de || !para) return { erro: "Escolha as duas pessoas." };
+  if (de === para) return { erro: "Escolha duas pessoas diferentes." };
+  const { data, error } = await ctx.supabase.rpc("reatribuir_tarefas", { p_de: de, p_para: para });
+  if (error) {
+    if (error.message.includes("ativa")) return { erro: "Quem vai receber precisa estar ativa no sistema." };
+    if (error.message.includes("function") || error.message.includes("schema cache")) return { erro: "Falta rodar o script 12 no Supabase." };
+    return { erro: "Não foi possível passar as tarefas. Atualize a página e tente de novo." };
+  }
+  for (const rota of ["/hoje", "/quadro", "/agenda", "/metricas", "/lancamentos"]) revalidatePath(rota);
+  return { quantidade: Number(data ?? 0) };
+}

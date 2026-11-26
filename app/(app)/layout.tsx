@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
+import { BarChart3, CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
@@ -43,6 +43,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/agenda"><CalendarRange size={17} /> Agenda</NavLink>
           <NavLink href="/lancamentos"><Rocket size={17} /> Lançamentos</NavLink>
           <NavLink href="/clientes"><Users size={17} /> Clientes</NavLink>
+          {pessoa.papel === "admin" && <NavLink href="/metricas"><BarChart3 size={17} /> Métricas</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/recorrentes"><Repeat size={17} /> Recorrentes</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
@@ -79,6 +80,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
               <History size={16} />
             </Link>
+            {pessoa.papel === "admin" && (
+              <Link href="/metricas" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Métricas" title="Métricas">
+                <BarChart3 size={16} />
+              </Link>
+            )}
             {pessoa.papel === "admin" && (
               <Link href="/admin" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Admin" title="Admin">
                 <ShieldCheck size={16} />
