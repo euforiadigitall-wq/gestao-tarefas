@@ -57,6 +57,7 @@ export function NovaTarefa({
             <option value="">Interna, sem cliente</option>
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
+          {clientes.length === 0 && <p className="mt-1.5 text-xs text-tx3">Nenhum cliente cadastrado ainda.</p>}
         </div>
         <div>
           <label htmlFor="nt-area" className="label mb-1.5 block">Área</label>
@@ -64,6 +65,7 @@ export function NovaTarefa({
             <option value="">{clienteId ? "Escolha" : "Só com cliente"}</option>
             {areas.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
           </select>
+          {!clienteId && <p className="mt-1.5 text-xs text-tx3">Escolha um cliente para liberar.</p>}
         </div>
         {admin && (
           <div>
