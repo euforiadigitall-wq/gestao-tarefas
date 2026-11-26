@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Etiquetas } from "@/components/Etiqueta";
+import { CardQuadro } from "@/components/CardQuadro";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { descreverPrazo, hojeSP } from "@/lib/datas";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
@@ -137,22 +137,15 @@ export default async function Quadro({
                   {col.itens.map((t) => {
                     const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
                     return (
-                      <article key={t.id} className="panel relative overflow-hidden py-3 pl-4 pr-3">
-                        <span className={`absolute inset-y-0 left-0 w-1 ${trilhoPrazo[prazo.tom]}`} aria-hidden="true" />
-                        <h3 className="text-sm font-medium leading-snug">{t.titulo}</h3>
-                        {t.lancamentos && t.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={t.lancamentos} /></p>}
-                        <p className="mt-1 text-xs text-tx2">
-                          {agrupar === "pessoa" ? (t.cliente ?? "Interna") : agrupar === "cliente" ? (t.responsavel ?? "Sem responsável") : `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`}
-                          {t.area && <span className="mono text-tx3"> · {t.area}</span>}
-                        </p>
-                        {t.bloco && <p className="mono mt-1 text-[11px] text-tx3">{t.bloco}</p>}
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                          {t.etapa_atual !== null && <span className="chip bg-infobg text-info">{t.estado_atual}</span>}
-                          {t.proxima_acao && agrupar !== "etapa" && <span className="text-xs text-tx2">Próxima: <b className="font-medium text-tx">{t.proxima_acao}</b></span>}
-                          <span className={`chip ml-auto ${corPrazo[prazo.tom]}`}>{prazo.texto}</span>
-                        </div>
-                      </article>
+                      <CardQuadro key={t.id} admin={admin} d={{
+                        id: t.id, titulo: t.titulo, area: t.area, bloco: t.bloco, lancamentos: t.lancamentos,
+                        linha: agrupar === "pessoa" ? (t.cliente ?? "Interna") : agrupar === "cliente" ? (t.responsavel ?? "Sem responsável") : `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`,
+                        estado: t.etapa_atual !== null ? t.estado_atual : null,
+                        proxima: t.proxima_acao && agrupar !== "etapa" ? t.proxima_acao : null,
+                        prazoTexto: prazo.texto, prazoClasse: corPrazo[prazo.tom], trilho: trilhoPrazo[prazo.tom],
+                      }} />
                     );
+
                   })}
                 </div>
               </section>

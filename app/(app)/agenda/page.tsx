@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
+import { AcoesTarefa } from "@/components/AcoesTarefa";
+import { ImportarExportar } from "@/components/ImportarExportar";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
@@ -25,6 +27,7 @@ const SEMANA_CURTA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 interface Item {
   chave: string;
+  tarefaId?: string;
   titulo: string;
   cliente: string | null;
   area: string | null;
@@ -69,9 +72,9 @@ interface TarefaRow {
 
 const primeiro = (n: string | null) => (n ? n.split(" ")[0] : null);
 
-function CartaoItem({ i, tom }: { i: Item; tom?: "atrasada" }) {
+function CartaoItem({ i, tom, admin }: { i: Item; tom?: "atrasada"; admin?: boolean }) {
   return (
-    <article className={`panel relative overflow-hidden py-2.5 pl-3.5 pr-3 ${i.futuro ? "opacity-70" : ""}`}>
+    <article className={`panel relative overflow-hidden py-2.5 pl-3.5 pr-3 ${i.futuro ? "opacity-90 border-dashed" : ""}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
       <h3 className="text-[13px] font-medium leading-snug">{i.titulo}</h3>
       {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
@@ -86,6 +89,7 @@ function CartaoItem({ i, tom }: { i: Item; tom?: "atrasada" }) {
           {i.quem && <span>{i.rotulo ? "· " : ""}{i.quem}</span>}
         </p>
       )}
+      {admin && i.tarefaId && <div className="mt-2"><AcoesTarefa id={i.tarefaId} admin titulo={i.titulo} /></div>}
     </article>
   );
 }
@@ -191,12 +195,12 @@ export default async function Agenda({
     const atual = t.etapa_atual === e.ordem;
     if (atual && atrasadasIds.has(t.id)) continue;
     itens.push({
-      chave: `e-${e.id}`, titulo: t.titulo, cliente: t.cliente?.nome ?? null, area: t.area?.nome ?? null,
+      chave: `e-${e.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente?.nome ?? null, area: t.area?.nome ?? null,
       quem: primeiro(e.responsavel?.nome ?? null), rotulo: e.nome, futuro: t.etapa_atual !== null && e.ordem > t.etapa_atual, data: e.prazo_previsto, lancamentos: tagsEtapas.get(t.id) ?? null,
     });
   }
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
-    itens.push({ chave: `t-${t.id}`, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, lancamentos: t.lancamentos });
+    itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, lancamentos: t.lancamentos });
   }
   const porDia = (d: string) => itens.filter((i) => i.data === d);
 
@@ -224,6 +228,7 @@ export default async function Agenda({
   const fixos: Record<string, string> = {};
   if (visao !== "mes") fixos.visao = visao;
   if (data !== hoje) fixos.data = data;
+  const exportFiltros = [dono ? `pessoa=${dono}` : "", cliente !== "todos" ? `cliente=${cliente}` : "", area !== "todas" ? `area=${area}` : "", lanc !== "todos" ? `lanc=${lanc}` : ""].filter(Boolean).join("&");
   const erro = etapasRes.error || simplesRes.error || atrasadasRes.error;
 
   const semanasMes = visao === "mes" ? Math.round((new Date(fim).getTime() - new Date(ini).getTime()) / 86400000 + 1) / 7 : 0;
@@ -257,6 +262,10 @@ export default async function Agenda({
         </nav>
       </div>
 
+      <div className="mt-4">
+        <ImportarExportar admin={admin} filtros={exportFiltros} lancamentoId={lanc !== "todos" ? lanc : undefined} />
+      </div>
+
       {nova && (
         <div className="mt-6">
           <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
@@ -279,8 +288,8 @@ export default async function Agenda({
           </h2>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {atrasadasRows.slice(0, VISIVEIS_ATRASADAS).map((t) => (
-              <CartaoItem key={t.id} tom="atrasada" i={{
-                chave: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel),
+              <CartaoItem key={t.id} tom="atrasada" admin={admin} i={{
+                chave: t.id, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel),
                 rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez, lancamentos: t.lancamentos,
               }} />
             ))}
@@ -344,7 +353,7 @@ export default async function Agenda({
                   </span>
                 </h2>
                 <div className="space-y-2">
-                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <CartaoItem key={i.chave} i={i} />)}
+                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
                 </div>
               </section>
             );
@@ -358,7 +367,7 @@ export default async function Agenda({
             <span className="h-px flex-1 bg-[var(--line)]" />
           </h2>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {diasSemana.slice(5).flatMap((d) => porDia(d)).map((i) => <CartaoItem key={i.chave} i={i} />)}
+            {diasSemana.slice(5).flatMap((d) => porDia(d)).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
           </div>
         </section>
       )}
@@ -375,7 +384,7 @@ export default async function Agenda({
             </div>
           ) : (
             <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {porDia(data).map((i) => <CartaoItem key={i.chave} i={i} />)}
+              {porDia(data).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
             </div>
           )}
         </section>

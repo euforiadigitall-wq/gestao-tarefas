@@ -4,6 +4,7 @@ import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { LinksCampo } from "@/components/LinksCampo";
 import { descreverPrazo, type TomPrazo } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
@@ -22,7 +23,7 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje, links = [] }: { t: TarefaView; hoje: string; links?: TarefaLink[] }) {
+export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean }) {
   const [pendente, iniciar] = useTransition();
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -144,6 +145,7 @@ export function TarefaCard({ t, hoje, links = [] }: { t: TarefaView; hoje: strin
         </div>
       )}
       {erro && <p role="alert" className="mt-3 rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
+      {admin && detalhes && <div className="mt-3 border-t border-[var(--line)] pt-3"><AcoesTarefa id={t.id} admin titulo={t.titulo} /></div>}
     </article>
   );
 }

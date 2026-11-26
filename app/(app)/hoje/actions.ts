@@ -31,7 +31,7 @@ function traduzir(msg: string | undefined): string {
   if (msg.includes("row-level security")) return "Você não tem permissão para isso.";
   if (msg.includes("ja concluida")) return "Essa tarefa já foi concluída.";
   if (msg.includes("defina quem faz")) return "Escolha quem faz cada função da peça.";
-  if (msg.includes("escolha a area")) return "Escolha a área do cliente (Tráfego ou Lançamentos).";
+  if (msg.includes("escolha a area")) return "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto).";
   if (msg.includes("apenas admin")) return "Só admin cria tarefa com esteira.";
   if (msg.includes("primeira")) return "Essa já é a primeira etapa, não dá para devolver.";
   return "Não foi possível concluir. Atualize a página e tente de novo.";
@@ -108,7 +108,7 @@ export async function criarTarefa(dados: {
   const titulo = dados.titulo.trim();
   if (!titulo) return { erro: "Escreva o que precisa ser feito." };
   if (titulo.length > 200) return { erro: "Use no máximo 200 caracteres no título." };
-  if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego ou Lançamentos)." };
+  if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto)." };
   if (dados.prazo && !/^\d{4}-\d{2}-\d{2}$/.test(dados.prazo)) return { erro: "Prazo inválido." };
   const descricao = (dados.descricao ?? "").trim();
   if (descricao.length > MAX_DESCRICAO) return { erro: `A descrição passou de ${MAX_DESCRICAO} caracteres. Deixe só o essencial e ponha o resto em um link.` };
@@ -158,7 +158,7 @@ export async function criarTarefaEsteira(dados: {
   if (!titulo) return { erro: "Escreva o nome da peça." };
   if (titulo.length > 200) return { erro: "Use no máximo 200 caracteres no título." };
   if (!dados.modeloId) return { erro: "Escolha o tipo de peça." };
-  if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego ou Lançamentos)." };
+  if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto)." };
   const descricao = (dados.descricao ?? "").trim();
   if (descricao.length > MAX_DESCRICAO) return { erro: `A descrição passou de ${MAX_DESCRICAO} caracteres. Deixe só o essencial e ponha o resto em um link.` };
   const links = prepararLinks(dados.links);

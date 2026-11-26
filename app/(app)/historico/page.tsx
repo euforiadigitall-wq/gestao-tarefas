@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { FiltrosHistorico } from "@/components/FiltrosHistorico";
 import { dataHoraSP, dias, diaSP } from "@/lib/datas";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
@@ -117,6 +118,9 @@ export default async function Historico({
                       {dataHoraSP(t.concluida_em)}{por ? ` · ${por}` : ""}
                     </span>
                   </div>
+                </div>
+                <div className="mt-2.5 border-t border-[var(--line)] pt-2.5">
+                  <AcoesTarefa id={t.id} concluida admin={admin} titulo={t.titulo} />
                 </div>
               </article>
             );

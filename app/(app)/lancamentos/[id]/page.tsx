@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EquipeLanc } from "@/components/EquipeLanc";
 import { Etiqueta } from "@/components/Etiqueta";
+import { ExcluirLancamento } from "@/components/ExcluirLancamento";
+import { ImportarExportar } from "@/components/ImportarExportar";
 import { ItemChecklist, type ItemLanc } from "@/components/ItemChecklist";
 import { MapaLancamento, type Folha, type RamoEtapa } from "@/components/MapaLancamento";
 import { NovoEntregavel } from "@/components/NovoEntregavel";
@@ -163,6 +165,10 @@ export default async function PaginaLancamento({
         {l.codigo && <Etiqueta codigo={l.codigo} cor={l.cor} />}
         <h1 className="text-[28px] font-semibold leading-none tracking-tight">{l.nome}</h1>
       </div>
+      <div className="mt-4 flex flex-wrap items-start gap-3">
+        <ImportarExportar admin={admin} filtros={`lanc=${l.id}`} lancamentoId={l.id} />
+        {admin && <ExcluirLancamento tipo="lancamento" id={l.id} nome={l.nome} />}
+      </div>
       <p className="mt-2 text-[14px] text-tx2">
         {l.cliente?.nome ?? "Cliente"} · {periodo}
         {l.promocao_explicita && <span className="chip ml-2 bg-goldbg text-gold">promoção explícita</span>}
@@ -250,6 +256,7 @@ export default async function PaginaLancamento({
                     </p>
                   </div>
                   {t?.status === "concluida" ? <span className="chip bg-okbg text-ok">concluído</span> : prazo && <span className={`chip ${corPrazo[prazo.tom]}`}>{prazo.texto}</span>}
+                  {admin && <ExcluirLancamento tipo="entregavel" id={x.id} lancamentoId={l.id} nome={t?.titulo ?? "entregável"} />}
                 </li>
               );
             })}

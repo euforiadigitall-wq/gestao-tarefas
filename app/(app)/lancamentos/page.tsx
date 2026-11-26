@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ImportarExportar } from "@/components/ImportarExportar";
 import { NovoLancamento } from "@/components/NovoLancamento";
 import { Etiqueta } from "@/components/Etiqueta";
 import { ddmm, hojeSP } from "@/lib/datas";
@@ -116,6 +117,10 @@ export default async function Lancamentos() {
           <h1 className="mt-1.5 text-[30px] font-semibold leading-none tracking-tight">Lançamentos</h1>
         </div>
         {admin && <NovoLancamento clientes={(clientesRes.data ?? []) as Opcao[]} pessoas={(pessoasRes.data ?? []) as Opcao[]} />}
+      </div>
+
+      <div className="mt-4">
+        <ImportarExportar admin={admin} />
       </div>
 
       {falhou && (

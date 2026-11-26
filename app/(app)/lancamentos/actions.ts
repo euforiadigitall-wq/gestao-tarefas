@@ -140,3 +140,19 @@ export async function definirEquipe(lancamentoId: string, papel: string, pessoaI
   revalidarTudo(lancamentoId);
   return {};
 }
+
+export async function excluirLancamento(id: string): Promise<Resultado & { tarefas?: number }> {
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.rpc("excluir_lancamento", { p_lancamento: id });
+  if (error) return { erro: traduzir(error.message) };
+  revalidarTudo();
+  return { tarefas: Number(data ?? 0) };
+}
+
+export async function excluirEntregavel(id: string, lancamentoId: string): Promise<Resultado> {
+  const supabase = await supabaseServer();
+  const { error } = await supabase.rpc("excluir_entregavel", { p_entregavel: id });
+  if (error) return { erro: traduzir(error.message) };
+  revalidarTudo(lancamentoId);
+  return {};
+}
