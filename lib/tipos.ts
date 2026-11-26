@@ -48,3 +48,25 @@ export interface TarefaFila {
   acao: string;
   prazo: string | null;
 }
+
+export interface ClienteAdmin {
+  id: string;
+  nome: string;
+  ativo: boolean;
+}
+
+export interface PessoaAdmin {
+  id: string;
+  nome: string;
+  apelido: string | null;
+  email: string | null;
+  papel: Papel;
+  ativo: boolean;
+}
+
+// Linha de gestao.acessos. area_id nulo = todas as areas do cliente.
+export interface Acesso {
+  pessoa_id: string;
+  cliente_id: string;
+  area_id: string | null;
+}

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarRange, History, KanbanSquare, Rocket, Sun, UserRound, Users } from "lucide-react";
+import { CalendarRange, History, KanbanSquare, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
@@ -57,6 +57,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <EmBreve icone={<CalendarRange size={17} />} nome="Cronograma" />
           <EmBreve icone={<Rocket size={17} />} nome="Lançamentos" />
           <EmBreve icone={<Users size={17} />} nome="Clientes" />
+          {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
         </nav>
         <div className="mt-auto rounded-xl border border-[var(--line)] bg-panel p-3">
@@ -79,6 +80,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
               <History size={16} />
             </Link>
+            {pessoa.papel === "admin" && (
+              <Link href="/admin" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Admin" title="Admin">
+                <ShieldCheck size={16} />
+              </Link>
+            )}
             <Link href="/conta" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Minha conta" title="Minha conta">
               <UserRound size={16} />
             </Link>
