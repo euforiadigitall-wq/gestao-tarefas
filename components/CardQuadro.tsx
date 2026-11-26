@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { detalhesTarefa, type DetalheTarefa } from "@/app/(app)/acoes/actions";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { Avatar, Esteira } from "@/components/Esteira";
+import { Comentarios } from "@/components/Comentarios";
 import { Etiquetas } from "@/components/Etiqueta";
 import { ddmm } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
@@ -91,6 +92,7 @@ export function CardQuadro({ d, admin }: { d: DadosCard; admin: boolean }) {
             </ul>
           )}
           {det && !det.erro && !det.notas && !(det.links?.length) && !(det.etapas?.length) && <p className="text-xs text-tx2">Sem detalhes. Quem faz a tarefa pode abrir no Hoje.</p>}
+          <Comentarios tarefaId={d.id} />
           <AcoesTarefa id={d.id} admin={admin} titulo={d.titulo} />
         </div>
       )}

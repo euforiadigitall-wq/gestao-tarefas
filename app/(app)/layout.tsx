@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
+import { BarChart3, Search, CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
+import { BuscaTopo } from "@/components/BuscaTopo";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
@@ -63,8 +64,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-[var(--line)] px-5 py-3 md:justify-end">
           <div className="md:hidden"><Logo compacto /></div>
+          <BuscaTopo />
           <div className="flex items-center gap-1">
             <ThemeToggle />
+            <Link href="/busca" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Buscar" title="Buscar">
+              <Search size={16} />
+            </Link>
             <Link href="/quadro" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Quadro" title="Quadro">
               <KanbanSquare size={16} />
             </Link>

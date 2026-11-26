@@ -4,6 +4,7 @@ import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { Comentarios } from "@/components/Comentarios";
 import { Esteira } from "@/components/Esteira";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { LinksCampo } from "@/components/LinksCampo";
@@ -136,6 +137,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
               onRemover={(k) => rodar(() => removerLink(k))}
             />
           </div>
+          <Comentarios tarefaId={t.id} />
         </div>
       )}
 
