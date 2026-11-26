@@ -140,3 +140,34 @@ export async function definirAcesso(p: {
   revalidatePath("/admin");
   return {};
 }
+
+const PAPEIS_OK = ["copy", "aprovador", "design", "social", "site"];
+
+export async function definirPapel(clienteId: string, papel: string, pessoaId: string): Promise<Resultado> {
+  const ctx = await exigirAdmin();
+  if ("erro" in ctx) return ctx;
+  if (!PAPEIS_OK.includes(papel)) return { erro: "Função desconhecida." };
+  if (!pessoaId) {
+    const { error } = await ctx.supabase.from("cliente_papeis").delete().eq("cliente_id", clienteId).eq("papel", papel);
+    if (error) return { erro: traduzir(error.message) };
+  } else {
+    const { error } = await ctx.supabase.from("cliente_papeis").upsert({ cliente_id: clienteId, papel, pessoa_id: pessoaId }, { onConflict: "cliente_id,papel" });
+    if (error) return { erro: traduzir(error.message) };
+  }
+  revalidatePath("/admin");
+  return {};
+}
+
+export async function definirPapelParaTodos(papel: string, pessoaId: string): Promise<Resultado> {
+  const ctx = await exigirAdmin();
+  if ("erro" in ctx) return ctx;
+  if (!PAPEIS_OK.includes(papel) || !pessoaId) return { erro: "Escolha a função e a pessoa." };
+  const { data: clientes, error: e1 } = await ctx.supabase.from("clientes").select("id").eq("ativo", true);
+  if (e1) return { erro: traduzir(e1.message) };
+  const linhas = (clientes ?? []).map((c) => ({ cliente_id: c.id, papel, pessoa_id: pessoaId }));
+  if (linhas.length === 0) return { erro: "Não há clientes ativos." };
+  const { error } = await ctx.supabase.from("cliente_papeis").upsert(linhas, { onConflict: "cliente_id,papel" });
+  if (error) return { erro: traduzir(error.message) };
+  revalidatePath("/admin");
+  return { aviso: `Aplicado a ${linhas.length} clientes.` };
+}

@@ -3,9 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminAcessos } from "@/components/AdminAcessos";
 import { AdminClientes } from "@/components/AdminClientes";
+import { AdminPapeis } from "@/components/AdminPapeis";
 import { AdminPessoas } from "@/components/AdminPessoas";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Acesso, Area, ClienteAdmin, PessoaAdmin } from "@/lib/tipos";
+import type { Acesso, Area, ClienteAdmin, PapelCliente, PessoaAdmin } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Admin" };
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ const ABAS = [
   { id: "clientes", nome: "Clientes" },
   { id: "pessoas", nome: "Pessoas" },
   { id: "acessos", nome: "Acessos" },
+  { id: "papeis", nome: "Papéis" },
 ] as const;
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
@@ -28,18 +30,20 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const { aba: pedida } = await searchParams;
   const aba = ABAS.some((a) => a.id === pedida) ? (pedida as (typeof ABAS)[number]["id"]) : "clientes";
 
-  const [clientesRes, pessoasRes, areasRes, acessosRes] = await Promise.all([
+  const [clientesRes, pessoasRes, areasRes, acessosRes, papeisRes] = await Promise.all([
     supabase.from("clientes").select("id,nome,ativo").order("nome"),
     supabase.from("pessoas").select("id,nome,apelido,email,papel,ativo").order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
     supabase.from("acessos").select("pessoa_id,cliente_id,area_id"),
+    supabase.from("cliente_papeis").select("cliente_id,papel,pessoa_id"),
   ]);
 
   const clientes = (clientesRes.data ?? []) as ClienteAdmin[];
   const pessoas = (pessoasRes.data ?? []) as PessoaAdmin[];
   const areas = (areasRes.data ?? []) as Area[];
   const acessos = (acessosRes.data ?? []) as Acesso[];
-  const falhou = clientesRes.error || pessoasRes.error || areasRes.error || acessosRes.error;
+  const papeis = (papeisRes.data ?? []) as PapelCliente[];
+  const falhou = clientesRes.error || pessoasRes.error || areasRes.error || acessosRes.error || papeisRes.error;
 
   return (
     <div className="mx-auto max-w-[920px]">
@@ -70,6 +74,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       <div className="mt-6">
         {aba === "clientes" && <AdminClientes clientes={clientes} />}
         {aba === "pessoas" && <AdminPessoas pessoas={pessoas} meuId={meuId} />}
+        {aba === "papeis" && <AdminPapeis clientes={clientes} pessoas={pessoas} papeis={papeis} />}
         {aba === "acessos" && (
           <AdminAcessos
             membros={pessoas.filter((p) => p.papel === "membro" && p.ativo)}

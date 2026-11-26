@@ -2,12 +2,12 @@
 
 import { Loader2, Plus, X } from "lucide-react";
 import { useState, useTransition } from "react";
-import { criarTarefa } from "@/app/(app)/hoje/actions";
-import type { Area, Opcao } from "@/lib/tipos";
+import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
+import type { Area, ModeloPeca, Opcao } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas,
-}: { admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[] }) {
+  admin, meuId, clientes, areas, pessoas, modelos,
+}: { admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[] }) {
   const [aberto, setAberto] = useState(false);
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState("");
@@ -16,14 +16,21 @@ export function NovaTarefa({
   const [clienteId, setClienteId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [responsavelId, setResponsavelId] = useState(meuId);
+  const [esteira, setEsteira] = useState(false);
+  const [modeloId, setModeloId] = useState("");
+  const [bloco, setBloco] = useState("");
+  const modelo = modelos.find((m) => m.id === modeloId);
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
     iniciar(async () => {
-      const r = await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId });
+      const r = esteira
+        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco })
+        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
+      setModeloId(""); setBloco(""); setEsteira(false);
       setAberto(false);
     });
   }
@@ -42,19 +49,40 @@ export function NovaTarefa({
         <h2 className="text-[15px] font-medium">Nova tarefa</h2>
         <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={() => setAberto(false)} aria-label="Fechar"><X size={16} /></button>
       </div>
+      {admin && (
+        <div role="tablist" aria-label="Tipo de tarefa" className="inline-flex rounded-lg bg-panel2 p-1">
+          {[{ v: false, n: "Tarefa simples" }, { v: true, n: "Peça com esteira" }].map((o) => (
+            <button key={o.n} type="button" role="tab" aria-selected={esteira === o.v}
+              onClick={() => { setEsteira(o.v); setErro(""); }}
+              className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${esteira === o.v ? "bg-[var(--panel)] font-medium text-tx shadow-sm" : "text-tx2 hover:text-tx"}`}>
+              {o.n}
+            </button>
+          ))}
+        </div>
+      )}
       <div>
-        <label htmlFor="nt-titulo" className="label mb-1.5 block">O que precisa ser feito</label>
-        <input id="nt-titulo" className="field" required maxLength={200} autoFocus placeholder="Ex.: revisar os stories de captação" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+        <label htmlFor="nt-titulo" className="label mb-1.5 block">{esteira ? "Nome da peça" : "O que precisa ser feito"}</label>
+        <input id="nt-titulo" className="field" required maxLength={200} autoFocus placeholder={esteira ? "Ex.: Carrossel: 3 erros na maquiagem de noiva" : "Ex.: revisar os stories de captação"} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo</label>
-          <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
-        </div>
+        {esteira ? (
+          <div>
+            <label htmlFor="nt-modelo" className="label mb-1.5 block">Tipo de peça</label>
+            <select id="nt-modelo" className="field" required value={modeloId} onChange={(e) => setModeloId(e.target.value)}>
+              <option value="">Escolha</option>
+              {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            </select>
+          </div>
+        ) : (
+          <div>
+            <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo</label>
+            <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+          </div>
+        )}
         <div>
           <label htmlFor="nt-cliente" className="label mb-1.5 block">Cliente</label>
-          <select id="nt-cliente" className="field" value={clienteId} onChange={(e) => { setClienteId(e.target.value); if (!e.target.value) setAreaId(""); }}>
-            <option value="">Interna, sem cliente</option>
+          <select id="nt-cliente" className="field" required={esteira} value={clienteId} onChange={(e) => { setClienteId(e.target.value); if (!e.target.value) setAreaId(""); }}>
+            <option value="">{esteira ? "Escolha" : "Interna, sem cliente"}</option>
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
           {clientes.length === 0 && <p className="mt-1.5 text-xs text-tx3">Nenhum cliente cadastrado ainda.</p>}
@@ -67,7 +95,12 @@ export function NovaTarefa({
           </select>
           {!clienteId && <p className="mt-1.5 text-xs text-tx3">Escolha um cliente para liberar.</p>}
         </div>
-        {admin && (
+        {esteira ? (
+          <div>
+            <label htmlFor="nt-bloco" className="label mb-1.5 block">Bloco (opcional)</label>
+            <input id="nt-bloco" className="field" maxLength={120} placeholder="Ex.: Captação, dia 1" value={bloco} onChange={(e) => setBloco(e.target.value)} />
+          </div>
+        ) : admin && (
           <div>
             <label htmlFor="nt-resp" className="label mb-1.5 block">Para quem</label>
             <select id="nt-resp" className="field" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}>
@@ -76,11 +109,22 @@ export function NovaTarefa({
           </div>
         )}
       </div>
+      {esteira && modelo && (
+        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg bg-panel2 px-3 py-2.5 text-[13px] text-tx2" aria-label="Sequência da peça">
+          {modelo.etapas.map((e, i) => (
+            <li key={e.ordem} className="flex items-center gap-2">
+              {i > 0 && <span aria-hidden className="text-tx3">→</span>}
+              <span><span className="text-tx">{e.nome}</span> <span className="text-tx3">({e.estado})</span></span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {esteira && <p className="text-xs text-tx3">Quem faz cada etapa e os prazos vêm do modelo e dos papéis do cliente. A primeira etapa já fica na vez de quem a executa.</p>}
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
       <div className="flex justify-end gap-2">
         <button type="button" className="btn btn-ghost" onClick={() => setAberto(false)}>Cancelar</button>
         <button type="submit" className="btn btn-primary" disabled={pendente}>
-          {pendente && <Loader2 size={15} className="animate-spin" />} Criar tarefa
+          {pendente && <Loader2 size={15} className="animate-spin" />} {esteira ? "Criar peça" : "Criar tarefa"}
         </button>
       </div>
     </form>

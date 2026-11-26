@@ -70,3 +70,23 @@ export interface Acesso {
   cliente_id: string;
   area_id: string | null;
 }
+
+export const PAPEIS_CLIENTE = [
+  { codigo: "copy", nome: "Copy" },
+  { codigo: "aprovador", nome: "Aprovação" },
+  { codigo: "design", nome: "Design" },
+  { codigo: "social", nome: "Publicação e disparo" },
+  { codigo: "site", nome: "Site" },
+] as const;
+
+export interface ModeloPeca {
+  id: string;
+  nome: string;
+  etapas: { ordem: number; nome: string; estado: string }[];
+}
+
+export interface PapelCliente {
+  cliente_id: string;
+  papel: string;
+  pessoa_id: string;
+}
