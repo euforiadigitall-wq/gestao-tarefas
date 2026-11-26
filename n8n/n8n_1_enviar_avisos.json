@@ -1,0 +1,383 @@
+{
+  "name": "Gestão EuforIA: enviar avisos por e-mail",
+  "nodes": [
+    {
+      "id": "96d34285-d8c6-4c0a-99e6-6f674c46fe5a",
+      "name": "A cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "45f6e5a9-8ac0-4ef7-beef-cc207ca01ada",
+              "name": "supabase_url",
+              "value": "https://pyuosinrvnvqgibzwwcb.supabase.co",
+              "type": "string"
+            },
+            {
+              "id": "d556af2a-0a1e-4b80-86dc-608dcc09b57b",
+              "name": "service_key",
+              "value": "COLE_AQUI_A_CHAVE_SERVICE_ROLE",
+              "type": "string"
+            },
+            {
+              "id": "d75e975e-ceaa-4546-b215-98350e9547ae",
+              "name": "resend_key",
+              "value": "COLE_AQUI_A_CHAVE_DO_RESEND",
+              "type": "string"
+            },
+            {
+              "id": "518fadd2-47c1-48ca-82d7-408c76c68992",
+              "name": "remetente",
+              "value": "EuforIA Tarefas <avisos@euforiadigital.com>",
+              "type": "string"
+            },
+            {
+              "id": "124f9c57-9673-4859-b0a5-18578648e942",
+              "name": "responder_para",
+              "value": "COLOQUE_AQUI_UM_EMAIL_QUE_RECEBE_RESPOSTA",
+              "type": "string"
+            },
+            {
+              "id": "7c4326a4-8f3c-4191-8269-808c25dd426a",
+              "name": "app_url",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0717e6a8-adce-4f60-bb37-10c334f6a50b",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "Cole aqui os valores uma vez. A chave service_role nunca vai para o navegador."
+    },
+    {
+      "id": "fe9d94b6-6b7f-4733-a815-feba2a7109c7",
+      "name": "Buscar avisos pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.supabase_url }}/rest/v1/notificacoes",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "enviada_em",
+              "value": "is.null"
+            },
+            {
+              "name": "tentativas",
+              "value": "lt.5"
+            },
+            {
+              "name": "select",
+              "value": "id,tipo,assunto,dados,tentativas,pessoa:pessoas(nome,email)"
+            },
+            {
+              "name": "order",
+              "value": "criada_em.asc"
+            },
+            {
+              "name": "limit",
+              "value": "40"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $json.service_key }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.service_key }}"
+            },
+            {
+              "name": "Accept-Profile",
+              "value": "gestao"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a40375e3-f274-4be9-9d1f-0233a82ec756",
+      "name": "Montar e-mail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const n = $json;\nconst cfg = $('Config').first().json;\nconst esc = (t) => String(t ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/\\n/g,'<br>');\nconst dia = (d) => { if (!d) return ''; const p = String(d).slice(0,10).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}` : ''; };\nconst d = n.dados || {};\nconst pessoa = n.pessoa || {};\nconst nome = String(pessoa.nome || '').split(' ')[0] || 'Oi';\n\nconst linha = (rotulo, valor) => valor ? `<tr><td style=\"padding:2px 12px 2px 0;color:#6b7280\">${rotulo}</td><td style=\"padding:2px 0\"><b>${esc(valor)}</b></td></tr>` : '';\nlet corpo = '';\n\nif (n.tipo === 'resumo_diario') {\n  const lista = (itens) => (itens || []).map(i =>\n    `<li style=\"margin:0 0 8px 0\"><b>${esc(i.titulo)}</b>${i.cliente ? ' (' + esc(i.cliente) + ')' : ''}${i.acao ? '<br><span style=\"color:#6b7280\">' + esc(i.acao) + ' · prazo ' + dia(i.prazo) + '</span>' : '<br><span style=\"color:#6b7280\">prazo ' + dia(i.prazo) + '</span>'}</li>`).join('');\n  if ((d.atrasadas || []).length) corpo += `<h3 style=\"margin:16px 0 8px;color:#b91c1c\">Atrasadas (${d.atrasadas.length})</h3><ul style=\"padding-left:18px;margin:0\">${lista(d.atrasadas)}</ul>`;\n  if ((d.hoje || []).length) corpo += `<h3 style=\"margin:16px 0 8px\">Para hoje (${d.hoje.length})</h3><ul style=\"padding-left:18px;margin:0\">${lista(d.hoje)}</ul>`;\n} else if (n.tipo === 'mencao' || n.tipo === 'comentario') {\n  corpo = `<p style=\"margin:0 0 8px\">${esc(d.por || 'Alguém')} ${n.tipo === 'mencao' ? 'mencionou você' : 'comentou'} em <b>${esc(d.titulo)}</b>:</p>` +\n          `<blockquote style=\"margin:8px 0;padding:8px 12px;border-left:3px solid #c9a24d;background:#faf7ef\">${esc(d.texto)}</blockquote>`;\n} else {\n  const intro = {\n    atribuida: 'Uma tarefa nova ficou com você.',\n    reatribuida: `${esc(d.por || 'Alguém')} passou esta tarefa para você.`,\n    na_sua_etapa: 'Uma peça chegou na sua etapa.',\n    devolvida: `${esc(d.por || 'Alguém')} devolveu esta peça para você.`,\n  }[n.tipo] || '';\n  corpo = `<p style=\"margin:0 0 10px\">${intro}</p><table style=\"border-collapse:collapse\">` +\n    linha('Tarefa', d.titulo) + linha('Cliente', d.cliente) + linha('Situação', d.estado) +\n    linha('Sua ação', d.proxima_acao) + linha('Prazo', dia(d.prazo)) + `</table>`;\n  if (n.tipo === 'devolvida' && d.motivo) {\n    corpo += `<p style=\"margin:12px 0 4px\"><b>Motivo da devolução</b></p><blockquote style=\"margin:0;padding:8px 12px;border-left:3px solid #b91c1c;background:#fdf2f2\">${esc(d.motivo)}</blockquote>`;\n  }\n}\n\nconst botao = cfg.app_url ? `<p style=\"margin:20px 0 0\"><a href=\"${esc(cfg.app_url)}\" style=\"background:#0f1b3d;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none\">Abrir o sistema</a></p>` : '';\nconst html = `<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#111827;max-width:560px\">` +\n  `<p style=\"margin:0 0 12px\">Oi, ${esc(nome)}.</p>${corpo}${botao}` +\n  `<p style=\"margin:24px 0 0;color:#9ca3af;font-size:12px\">Aviso automático do sistema de tarefas da EuforIA. Você liga ou desliga estes avisos no seu perfil.</p></div>`;\n\nreturn { json: { notif_id: n.id, tentativas: n.tentativas || 0, to: pessoa.email || '', subject: n.assunto, html } };"
+      }
+    },
+    {
+      "id": "f61cc330-d227-4962-835b-a28670074423",
+      "name": "Enviar pelo Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.resend_key }}"
+            },
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.notif_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $('Config').first().json.remetente, to: [$json.to], subject: $json.subject, html: $json.html, reply_to: $('Config').first().json.responder_para || undefined }) }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 600
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "aeb39959-7dbc-4a57-b369-13fad94fb46e",
+      "name": "Enviou?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "2876be3e-787b-48fa-996f-f888c2544b83",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d7f8b015-167c-4a62-a7a9-80696c597d73",
+      "name": "Marcar como enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        -100
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config').first().json.supabase_url }}/rest/v1/notificacoes?id=eq.{{ $('Montar e-mail').item.json.notif_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "gestao"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ enviada_em: new Date().toISOString(), tentativas: $('Montar e-mail').item.json.tentativas + 1, erro: null }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "025997ad-b362-49dd-8b7d-4529c6d929b9",
+      "name": "Registrar falha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        100
+      ],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config').first().json.supabase_url }}/rest/v1/notificacoes?id=eq.{{ $('Montar e-mail').item.json.notif_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "gestao"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tentativas: $('Montar e-mail').item.json.tentativas + 1, erro: JSON.stringify($json.error || $json).slice(0, 500) }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "A cada 5 minutos": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Buscar avisos pendentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar avisos pendentes": {
+      "main": [
+        [
+          {
+            "node": "Montar e-mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar e-mail": {
+      "main": [
+        [
+          {
+            "node": "Enviar pelo Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar pelo Resend": {
+      "main": [
+        [
+          {
+            "node": "Enviou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviou?": {
+      "main": [
+        [
+          {
+            "node": "Marcar como enviado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar falha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false
+}

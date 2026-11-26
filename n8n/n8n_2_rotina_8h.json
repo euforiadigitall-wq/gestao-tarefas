@@ -1,0 +1,167 @@
+{
+  "name": "Gestão EuforIA: rotina das 8h (recorrentes e resumo)",
+  "nodes": [
+    {
+      "id": "a824260a-5f0a-46b1-afcc-6f90bcf1527e",
+      "name": "Dias úteis, 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1a20980-a293-4dec-993b-e3b1cf1a2c79",
+              "name": "supabase_url",
+              "value": "https://pyuosinrvnvqgibzwwcb.supabase.co",
+              "type": "string"
+            },
+            {
+              "id": "52697f69-4603-4e56-ba66-8bba31c7065a",
+              "name": "service_key",
+              "value": "COLE_AQUI_A_CHAVE_SERVICE_ROLE",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "74947d68-6e55-4ba0-823c-1ed866940cb3",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "Cole aqui os valores uma vez. A chave service_role nunca vai para o navegador."
+    },
+    {
+      "id": "be5dd35e-f945-42cb-8ee3-da682ffaea4d",
+      "name": "Gerar tarefas recorrentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.supabase_url }}/rest/v1/rpc/gerar_recorrentes",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "gestao"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_data: $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "313e7f02-5648-4051-abff-afa0ab3744b7",
+      "name": "Gerar resumo do dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.supabase_url }}/rest/v1/rpc/gerar_resumo_diario",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.service_key }}"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "gestao"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_data: $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Dias úteis, 8h": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Gerar tarefas recorrentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar tarefas recorrentes": {
+      "main": [
+        [
+          {
+            "node": "Gerar resumo do dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false
+}
