@@ -8,16 +8,6 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Pessoa } from "@/lib/tipos";
 
-function EmBreve({ icone, nome }: { icone: React.ReactNode; nome: string }) {
-  return (
-    <span className="flex cursor-not-allowed items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-tx3" aria-disabled="true">
-      {icone}
-      <span className="flex-1">{nome}</span>
-      <span className="label !text-[10px]">em breve</span>
-    </span>
-  );
-}
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await supabaseServer();
   const { data: auth } = await usuarioAtual();
@@ -52,7 +42,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/quadro"><KanbanSquare size={17} /> Quadro</NavLink>
           <NavLink href="/agenda"><CalendarRange size={17} /> Agenda</NavLink>
           <NavLink href="/lancamentos"><Rocket size={17} /> Lançamentos</NavLink>
-          <EmBreve icone={<Users size={17} />} nome="Clientes" />
+          <NavLink href="/clientes"><Users size={17} /> Clientes</NavLink>
           {pessoa.papel === "admin" && <NavLink href="/recorrentes"><Repeat size={17} /> Recorrentes</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
@@ -82,6 +72,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
             <Link href="/lancamentos" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Lançamentos" title="Lançamentos">
               <Rocket size={16} />
+            </Link>
+            <Link href="/clientes" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Clientes" title="Clientes">
+              <Users size={17} />
             </Link>
             <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
               <History size={16} />
