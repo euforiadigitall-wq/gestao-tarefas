@@ -11,13 +11,13 @@ export async function listarComentarios(tarefaId: string): Promise<ListaComentar
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erro: "Sua sessão expirou. Entre de novo." };
   const [c, p, eu] = await Promise.all([
-    supabase.from("comentarios").select("id,texto,criado_em,autor_id,autor:pessoas(nome)").eq("tarefa_id", tarefaId).order("criado_em", { ascending: true }).limit(200),
+    supabase.from("comentarios").select("id,texto,criado_em,autor_id,automacao,autor:pessoas(nome)").eq("tarefa_id", tarefaId).order("criado_em", { ascending: true }).limit(200),
     supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("pessoas").select("papel").eq("id", auth.user.id).maybeSingle(),
   ]);
   if (c.error) return { erro: "Não consegui abrir os comentários. Atualize a página." };
-  const itens = ((c.data ?? []) as unknown as { id: string; texto: string; criado_em: string; autor_id: string; autor: { nome: string } | null }[]).map((x) => ({
-    id: x.id, texto: x.texto, criado_em: x.criado_em, autor: x.autor?.nome ?? "Alguém", meu: x.autor_id === auth.user!.id,
+  const itens = ((c.data ?? []) as unknown as { id: string; texto: string; criado_em: string; autor_id: string | null; automacao: string | null; autor: { nome: string } | null }[]).map((x) => ({
+    id: x.id, texto: x.texto, criado_em: x.criado_em, autor: x.autor?.nome ?? x.automacao ?? "Alguém", meu: x.autor_id === auth.user!.id,
   }));
   return { itens, pessoas: ((p.data ?? []) as { id: string; nome: string }[]).filter((x) => x.id !== auth.user!.id), sou_admin: eu.data?.papel === "admin" };
 }
