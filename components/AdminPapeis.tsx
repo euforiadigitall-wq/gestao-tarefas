@@ -28,7 +28,7 @@ export function AdminPapeis({
   return (
     <div className="space-y-5">
       <p className="rounded-lg bg-panel2 px-4 py-3 text-[13px] text-tx2">
-        Define quem faz cada função nas peças com esteira de cada cliente. Ao criar a peça, a etapa vai para a pessoa dessa função.
+        Opcional. Serve só para clientes com equipe fixa: ao criar uma peça, a pessoa já vem sugerida. Quem não tem nada aqui escolhe na hora de criar a peça.
         Use a linha &quot;Todos os clientes&quot; para preencher de uma vez e depois ajuste o que for diferente.
       </p>
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}

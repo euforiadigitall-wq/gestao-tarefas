@@ -10,10 +10,8 @@ function traduzir(msg: string | undefined): string {
   if (msg.includes("so o responsavel")) return "Só quem é responsável pela tarefa, ou um admin, pode concluir.";
   if (msg.includes("row-level security")) return "Você não tem permissão para isso.";
   if (msg.includes("ja concluida")) return "Essa tarefa já foi concluída.";
-  if (msg.includes("defina no cliente")) {
-    const quem = msg.split("papel:")[1]?.trim() ?? "";
-    return `Antes de criar, defina em Admin, Papéis, quem faz cada função desse cliente${quem ? ` (${quem})` : ""}.`;
-  }
+  if (msg.includes("defina quem faz")) return "Escolha quem faz cada função da peça.";
+  if (msg.includes("escolha a area")) return "Escolha a área do cliente (Tráfego ou Lançamentos).";
   if (msg.includes("apenas admin")) return "Só admin cria tarefa com esteira.";
   if (msg.includes("primeira")) return "Essa já é a primeira etapa, não dá para devolver.";
   return "Não foi possível concluir. Atualize a página e tente de novo.";
@@ -83,13 +81,13 @@ export async function criarTarefaEsteira(dados: {
   clienteId: string;
   areaId: string;
   bloco: string;
+  responsaveis: Record<string, string>;
 }): Promise<Resultado> {
   const titulo = dados.titulo.trim();
   if (!titulo) return { erro: "Escreva o nome da peça." };
   if (titulo.length > 200) return { erro: "Use no máximo 200 caracteres no título." };
   if (!dados.modeloId) return { erro: "Escolha o tipo de peça." };
-  if (!dados.clienteId) return { erro: "Tarefa com esteira precisa de cliente." };
-  if (!dados.areaId) return { erro: "Escolha a área do cliente (Tráfego ou Lançamentos)." };
+  if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego ou Lançamentos)." };
 
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
@@ -97,10 +95,11 @@ export async function criarTarefaEsteira(dados: {
 
   const { error } = await supabase.rpc("criar_tarefa_de_modelo", {
     p_titulo: titulo,
-    p_cliente: dados.clienteId,
+    p_cliente: dados.clienteId || null,
     p_modelo: dados.modeloId,
-    p_area: dados.areaId,
+    p_area: dados.clienteId ? dados.areaId : null,
     p_bloco: dados.bloco.trim().slice(0, 120) || null,
+    p_responsaveis: Object.fromEntries(Object.entries(dados.responsaveis).filter(([, v]) => v)),
   });
   if (error) return { erro: traduzir(error.message) };
   revalidatePath("/hoje");

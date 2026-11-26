@@ -141,7 +141,7 @@ export async function definirAcesso(p: {
   return {};
 }
 
-const PAPEIS_OK = ["copy", "aprovador", "design", "social", "site"];
+const PAPEIS_OK = ["copy", "aprovador", "design", "social", "site", "dev"];
 
 export async function definirPapel(clienteId: string, papel: string, pessoaId: string): Promise<Resultado> {
   const ctx = await exigirAdmin();

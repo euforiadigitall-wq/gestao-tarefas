@@ -3,11 +3,11 @@
 import { Loader2, Plus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
-import type { Area, ModeloPeca, Opcao } from "@/lib/tipos";
+import { PAPEIS_CLIENTE, type Area, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas, modelos,
-}: { admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[] }) {
+  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente,
+}: { admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[] }) {
   const [aberto, setAberto] = useState(false);
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState("");
@@ -20,17 +20,24 @@ export function NovaTarefa({
   const [modeloId, setModeloId] = useState("");
   const [bloco, setBloco] = useState("");
   const modelo = modelos.find((m) => m.id === modeloId);
+  const [escolhas, setEscolhas] = useState<Record<string, string>>({});
+  const papeisDaPeca = modelo
+    ? Array.from(new Set(modelo.etapas.map((e) => e.papel).filter((p): p is string => !!p)))
+    : [];
+  const sugerido = (papel: string) => papeisCliente.find((x) => x.cliente_id === clienteId && x.papel === papel)?.pessoa_id ?? "";
+  const quem = (papel: string) => escolhas[papel] ?? sugerido(papel);
+  const nomePapel = (papel: string) => PAPEIS_CLIENTE.find((p) => p.codigo === papel)?.nome ?? papel;
 
   function enviar(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
     iniciar(async () => {
       const r = esteira
-        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco })
+        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
         : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
-      setModeloId(""); setBloco(""); setEsteira(false);
+      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({});
       setAberto(false);
     });
   }
@@ -68,7 +75,7 @@ export function NovaTarefa({
         {esteira ? (
           <div>
             <label htmlFor="nt-modelo" className="label mb-1.5 block">Tipo de peça</label>
-            <select id="nt-modelo" className="field" required value={modeloId} onChange={(e) => setModeloId(e.target.value)}>
+            <select id="nt-modelo" className="field" required value={modeloId} onChange={(e) => { setModeloId(e.target.value); setEscolhas({}); }}>
               <option value="">Escolha</option>
               {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
@@ -81,8 +88,8 @@ export function NovaTarefa({
         )}
         <div>
           <label htmlFor="nt-cliente" className="label mb-1.5 block">Cliente</label>
-          <select id="nt-cliente" className="field" required={esteira} value={clienteId} onChange={(e) => { setClienteId(e.target.value); if (!e.target.value) setAreaId(""); }}>
-            <option value="">{esteira ? "Escolha" : "Interna, sem cliente"}</option>
+          <select id="nt-cliente" className="field" value={clienteId} onChange={(e) => { setClienteId(e.target.value); if (!e.target.value) setAreaId(""); }}>
+            <option value="">{esteira ? "Avulso" : "Interna, sem cliente"}</option>
             {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
           {clientes.length === 0 && <p className="mt-1.5 text-xs text-tx3">Nenhum cliente cadastrado ainda.</p>}
@@ -119,7 +126,23 @@ export function NovaTarefa({
           ))}
         </ol>
       )}
-      {esteira && <p className="text-xs text-tx3">Quem faz cada etapa e os prazos vêm do modelo e dos papéis do cliente. A primeira etapa já fica na vez de quem a executa.</p>}
+      {esteira && papeisDaPeca.length > 0 && (
+        <div>
+          <p className="label mb-2">Quem faz cada função</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {papeisDaPeca.map((papel) => (
+              <div key={papel}>
+                <label htmlFor={`nt-papel-${papel}`} className="mb-1.5 block text-[13px] text-tx2">{nomePapel(papel)}</label>
+                <select id={`nt-papel-${papel}`} className="field" required value={quem(papel)} onChange={(e) => setEscolhas((s) => ({ ...s, [papel]: e.target.value }))}>
+                  <option value="">Escolha</option>
+                  {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {esteira && <p className="text-xs text-tx3">Os prazos vêm do modelo, 1 dia útil por etapa. A primeira etapa já fica na vez de quem a executa.</p>}
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
       <div className="flex justify-end gap-2">
         <button type="button" className="btn btn-ghost" onClick={() => setAberto(false)}>Cancelar</button>

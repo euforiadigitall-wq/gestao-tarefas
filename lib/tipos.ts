@@ -77,12 +77,13 @@ export const PAPEIS_CLIENTE = [
   { codigo: "design", nome: "Design" },
   { codigo: "social", nome: "Publicação e disparo" },
   { codigo: "site", nome: "Site" },
+  { codigo: "dev", nome: "Dev" },
 ] as const;
 
 export interface ModeloPeca {
   id: string;
   nome: string;
-  etapas: { ordem: number; nome: string; estado: string }[];
+  etapas: { ordem: number; nome: string; estado: string; papel: string | null }[];
 }
 
 export interface PapelCliente {

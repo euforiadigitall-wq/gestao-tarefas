@@ -5,7 +5,7 @@ import { TarefaCard } from "@/components/TarefaCard";
 import { TrocarPessoa } from "@/components/TrocarPessoa";
 import { dataExtensa, hojeSP } from "@/lib/datas";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Area, ModeloPeca, Opcao, Pessoa, TarefaFila, TarefaView } from "@/lib/tipos";
+import type { Area, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaView } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Hoje" };
 export const dynamic = "force-dynamic";
@@ -62,7 +62,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   const alvo = admin && pedida && pessoas.some((p) => p.id === pedida) ? pedida : meuId;
   const nomeAlvo = pessoas.find((p) => p.id === alvo)?.nome.split(" ")[0] ?? "";
 
-  const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes] = await Promise.all([
+  const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes, papeisRes] = await Promise.all([
     supabase
       .from("v_tarefas")
       .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas")
@@ -80,7 +80,10 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
     supabase.from("clientes").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
     admin
-      ? supabase.from("modelos_peca").select("id,nome,etapas:modelos_etapa(ordem,nome,estado)").eq("ativo", true).order("nome")
+      ? supabase.from("modelos_peca").select("id,nome,etapas:modelos_etapa(ordem,nome,estado,papel)").eq("ativo", true).order("nome")
+      : Promise.resolve({ data: [] as unknown[] }),
+    admin
+      ? supabase.from("cliente_papeis").select("cliente_id,papel,pessoa_id")
       : Promise.resolve({ data: [] as unknown[] }),
   ]);
 
@@ -115,6 +118,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
           clientes={(clientesRes.data ?? []) as Opcao[]}
           areas={(areasRes.data ?? []) as Area[]}
           pessoas={pessoas}
+          papeisCliente={(papeisRes.data ?? []) as PapelCliente[]}
           modelos={((modelosRes.data ?? []) as ModeloPeca[]).map((m) => ({ ...m, etapas: [...m.etapas].sort((a, b) => a.ordem - b.ordem) }))}
         />
       </div>
