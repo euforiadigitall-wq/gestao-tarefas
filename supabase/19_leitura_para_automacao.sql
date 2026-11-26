@@ -143,6 +143,22 @@ begin
 end;
 $$;
 
+-- Põe uma linha no começo das notas (ex.: "**Pasta no Drive:** URL"), só se ainda não houver uma linha com o mesmo prefixo.
+create or replace function gestao.srv_notas_inicio(p_tarefa uuid, p_linha text, p_prefixo text default null)
+returns void
+language plpgsql security definer set search_path = gestao, public as $$
+declare v_notas text;
+begin
+  if not gestao.e_servico() then raise exception 'apenas servico'; end if;
+  if nullif(trim(p_linha), '') is null then raise exception 'linha vazia'; end if;
+  select coalesce(notas, '') into v_notas from gestao.tarefas where id = p_tarefa;
+  if not found then raise exception 'tarefa nao encontrada'; end if;
+  if p_prefixo is not null and position(p_prefixo in v_notas) > 0 then return; end if;
+  perform set_config('gestao.interno', '1', true);
+  update gestao.tarefas set notas = p_linha || case when v_notas = '' then '' else E'\n' || v_notas end where id = p_tarefa;
+end;
+$$;
+
 -- Tipos que a rotina usa no lugar das tarefas "[PÁGINA] ..." do ClickUp.
 do $$
 declare m uuid;
@@ -157,6 +173,8 @@ begin
 end $$;
 
 revoke execute on function gestao.srv_criar_peca(text, text, jsonb, text, uuid, text, text) from public, anon, authenticated;
+revoke execute on function gestao.srv_notas_inicio(uuid, text, text) from public, anon, authenticated;
+grant execute on function gestao.srv_notas_inicio(uuid, text, text) to service_role;
 revoke execute on function gestao.srv_ler_tarefa(uuid) from public, anon, authenticated;
 revoke execute on function gestao.srv_buscar_tarefas(text, date, date, boolean) from public, anon, authenticated;
 revoke execute on function gestao.srv_pendentes_automacao() from public, anon, authenticated;
@@ -168,6 +186,7 @@ do $$
 begin
   if exists (select 1 from pg_roles where rolname = 'gestao_n8n') then
     grant execute on function gestao.srv_criar_peca(text, text, jsonb, text, uuid, text, text) to gestao_n8n;
+    grant execute on function gestao.srv_notas_inicio(uuid, text, text) to gestao_n8n;
     grant execute on function gestao.srv_ler_tarefa(uuid) to gestao_n8n;
     grant execute on function gestao.srv_buscar_tarefas(text, date, date, boolean) to gestao_n8n;
     grant execute on function gestao.srv_pendentes_automacao() to gestao_n8n;
