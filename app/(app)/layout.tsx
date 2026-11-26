@@ -55,7 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/historico"><History size={17} /> Histórico</NavLink>
           <NavLink href="/quadro"><KanbanSquare size={17} /> Quadro</NavLink>
           <NavLink href="/agenda"><CalendarRange size={17} /> Agenda</NavLink>
-          <EmBreve icone={<Rocket size={17} />} nome="Lançamentos" />
+          <NavLink href="/lancamentos"><Rocket size={17} /> Lançamentos</NavLink>
           <EmBreve icone={<Users size={17} />} nome="Clientes" />
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
@@ -82,6 +82,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
             <Link href="/agenda" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Agenda" title="Agenda">
               <CalendarRange size={16} />
+            </Link>
+            <Link href="/lancamentos" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Lançamentos" title="Lançamentos">
+              <Rocket size={16} />
             </Link>
             <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
               <History size={16} />

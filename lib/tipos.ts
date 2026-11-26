@@ -38,6 +38,7 @@ export interface TarefaView {
   atrasada: boolean;
   bloco: string | null;
   notas: string | null;
+  lancamentos?: EtiquetaLanc[] | null;
 }
 
 export interface TarefaFila {
@@ -47,6 +48,7 @@ export interface TarefaFila {
   cliente: string | null;
   acao: string;
   prazo: string | null;
+  lancamentos?: EtiquetaLanc[] | null;
 }
 
 export interface ClienteAdmin {
@@ -97,4 +99,18 @@ export interface PapelCliente {
   cliente_id: string;
   papel: string;
   pessoa_id: string;
+}
+
+// Etiqueta do lançamento, mostrada em todo card de tarefa
+export interface EtiquetaLanc {
+  id: string;
+  codigo: string;
+  cor: string;
+}
+
+export interface LancamentoOpcao {
+  id: string;
+  codigo: string;
+  cor: string;
+  nome: string;
 }

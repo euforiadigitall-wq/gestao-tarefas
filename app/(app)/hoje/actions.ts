@@ -103,6 +103,7 @@ export async function criarTarefa(dados: {
   responsavelId: string;
   descricao?: string;
   links?: NovoLink[];
+  lancamentoIds?: string[];
 }): Promise<Resultado> {
   const titulo = dados.titulo.trim();
   if (!titulo) return { erro: "Escreva o que precisa ser feito." };
@@ -130,6 +131,10 @@ export async function criarTarefa(dados: {
     status: "a_fazer",
   }).select("id").single();
   if (error) return { erro: traduzir(error.message) };
+  if (criada && (dados.lancamentoIds ?? []).length > 0) {
+    const { error: e3 } = await supabase.from("tarefa_lancamentos").insert(dados.lancamentoIds!.map((l) => ({ tarefa_id: criada.id, lancamento_id: l })));
+    if (e3) { revalidarTudo(); return { erro: "A tarefa foi criada, mas a etiqueta do lançamento não foi salva. Peça a uma admin para ajustar." }; }
+  }
   if (criada && links.ok.length > 0) {
     const { error: e2 } = await supabase.from("links").insert(links.ok.map((l) => ({ ...l, tarefa_id: criada.id, criado_por: auth.user!.id })));
     if (e2) { revalidarTudo(); return { erro: "A tarefa foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }
@@ -147,6 +152,7 @@ export async function criarTarefaEsteira(dados: {
   responsaveis: Record<string, string>;
   descricao?: string;
   links?: NovoLink[];
+  lancamentoIds?: string[];
 }): Promise<Resultado> {
   const titulo = dados.titulo.trim();
   if (!titulo) return { erro: "Escreva o nome da peça." };
@@ -171,6 +177,10 @@ export async function criarTarefaEsteira(dados: {
     p_responsaveis: Object.fromEntries(Object.entries(dados.responsaveis).filter(([, v]) => v)),
   });
   if (error) return { erro: traduzir(error.message) };
+  if (id && (dados.lancamentoIds ?? []).length > 0) {
+    const { error: e3 } = await supabase.from("tarefa_lancamentos").insert(dados.lancamentoIds!.map((l) => ({ tarefa_id: id as string, lancamento_id: l })));
+    if (e3) { revalidarTudo(); return { erro: "A peça foi criada, mas a etiqueta do lançamento não foi salva. Peça a uma admin para ajustar." }; }
+  }
   if (id && descricao) await supabase.from("tarefas").update({ notas: descricao }).eq("id", id as string);
   if (id && links.ok.length > 0) {
     const { error: e2 } = await supabase.from("links").insert(links.ok.map((l) => ({ ...l, tarefa_id: id as string, criado_por: auth.user!.id })));

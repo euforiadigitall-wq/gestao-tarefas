@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { FilaCard } from "@/components/FilaCard";
+import { ItemChecklist, type ItemLanc } from "@/components/ItemChecklist";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import { TarefaCard } from "@/components/TarefaCard";
 import { TrocarPessoa } from "@/components/TrocarPessoa";
 import { dataExtensa, hojeSP } from "@/lib/datas";
+import { etiquetasDeTarefas } from "@/lib/lancfiltro";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Area, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaLink, TarefaView } from "@/lib/tipos";
+import type { Area, LancamentoOpcao, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaLink, TarefaView } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Hoje" };
 export const dynamic = "force-dynamic";
@@ -62,10 +64,10 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   const alvo = admin && pedida && pessoas.some((p) => p.id === pedida) ? pedida : meuId;
   const nomeAlvo = pessoas.find((p) => p.id === alvo)?.nome.split(" ")[0] ?? "";
 
-  const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes, papeisRes] = await Promise.all([
+  const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes, papeisRes, lancRes, itensRes] = await Promise.all([
     supabase
       .from("v_tarefas")
-      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas")
+      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos")
       .eq("responsavel_id", alvo)
       .neq("status", "concluida")
       .is("arquivada_em", null)
@@ -85,7 +87,20 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
     admin
       ? supabase.from("cliente_papeis").select("cliente_id,papel,pessoa_id")
       : Promise.resolve({ data: [] as unknown[] }),
+    admin
+      ? supabase.from("lancamentos").select("id,codigo,cor,nome").neq("status", "encerrado").order("codigo")
+      : Promise.resolve({ data: [] as unknown[] }),
+    supabase
+      .from("lancamento_checklist")
+      .select("id,lancamento_id,texto,critico,prazo,feito,pessoa_id,pessoa:pessoas(nome),lancamento:lancamentos!inner(codigo,cor,status)")
+      .eq("pessoa_id", alvo)
+      .eq("feito", false)
+      .neq("lancamento.status", "encerrado")
+      .order("prazo", { ascending: true, nullsFirst: false })
+      .limit(100),
   ]);
+  const lancsOpcoes = ((lancRes.data ?? []) as LancamentoOpcao[]).filter((l) => l.codigo);
+  const itensLanc = ((itensRes.data ?? []) as unknown as (Omit<ItemLanc, "pessoa"> & { pessoa: { nome: string } | null; lancamento: { codigo: string; cor: string } })[]);
 
   const tarefas = (tarefasRes.data ?? []) as unknown as TarefaView[];
   const { data: linksData } = tarefas.length
@@ -97,9 +112,13 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   const atrasadas = tarefas.filter((t) => t.atrasada);
   const naVez = tarefas.filter((t) => !t.atrasada);
 
+  const tagsFila = await etiquetasDeTarefas(
+    supabase,
+    ((filaRes.data ?? []) as unknown as EtapaFila[]).map((e) => e.tarefa.id),
+  );
   const fila: TarefaFila[] = ((filaRes.data ?? []) as unknown as EtapaFila[])
     .filter((e) => e.tarefa.status !== "concluida" && !e.tarefa.arquivada_em && e.tarefa.etapa_atual !== null && e.ordem > e.tarefa.etapa_atual)
-    .map((e) => ({ id: e.id, tarefa_id: e.tarefa.id, titulo: e.tarefa.titulo, cliente: e.tarefa.cliente?.nome ?? null, acao: e.nome, prazo: e.prazo_previsto }))
+    .map((e) => ({ id: e.id, tarefa_id: e.tarefa.id, titulo: e.tarefa.titulo, cliente: e.tarefa.cliente?.nome ?? null, acao: e.nome, prazo: e.prazo_previsto, lancamentos: tagsFila.get(e.tarefa.id) ?? null }))
     .sort((a, b) => (a.prazo ?? "9999").localeCompare(b.prazo ?? "9999"));
 
   const falhou = tarefasRes.error || filaRes.error;
@@ -124,6 +143,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
           areas={(areasRes.data ?? []) as Area[]}
           pessoas={pessoas}
           papeisCliente={(papeisRes.data ?? []) as PapelCliente[]}
+          lancamentos={lancsOpcoes}
           modelos={((modelosRes.data ?? []) as ModeloPeca[]).map((m) => ({ ...m, etapas: [...m.etapas].sort((a, b) => a.ordem - b.ordem) }))}
         />
       </div>
@@ -156,6 +176,20 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
           naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} links={linksPorTarefa.get(t.id) ?? []} />)
         )}
       </Secao>
+
+      {itensLanc.length > 0 && (
+        <Secao titulo="Do lançamento" n={itensLanc.length}>
+          <div className="panel px-5 py-1">
+            <ul>
+              {itensLanc.map((i) => (
+                <ItemChecklist key={i.id} hoje={hoje} podeMarcar admin={admin}
+                  item={{ id: i.id, lancamento_id: i.lancamento_id, texto: i.texto, critico: i.critico, prazo: i.prazo, feito: i.feito, pessoa_id: i.pessoa_id, pessoa: i.pessoa?.nome ?? null }}
+                  etiqueta={{ codigo: i.lancamento.codigo, cor: i.lancamento.cor }} />
+              ))}
+            </ul>
+          </div>
+        </Secao>
+      )}
 
       {fila.length > 0 && (
         <Secao titulo="Na fila, ainda não é sua" n={fila.length}>

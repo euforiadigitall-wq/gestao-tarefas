@@ -1,4 +1,5 @@
 import { Hourglass } from "lucide-react";
+import { Etiquetas } from "@/components/Etiqueta";
 import { ddmm } from "@/lib/datas";
 import type { TarefaFila } from "@/lib/tipos";
 
@@ -8,6 +9,7 @@ export function FilaCard({ f }: { f: TarefaFila }) {
       <Hourglass size={15} aria-hidden="true" />
       <div className="min-w-0 flex-1 basis-56">
         <h3 className="text-[14px] leading-snug">{f.titulo}</h3>
+        {f.lancamentos && f.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={f.lancamentos} /></p>}
         <p className="mt-0.5 text-[12px]">
           {f.cliente ?? "Interna"} · sua ação: {f.acao}
         </p>

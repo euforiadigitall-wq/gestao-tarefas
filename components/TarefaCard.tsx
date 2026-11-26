@@ -1,5 +1,6 @@
 "use client";
 
+import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
@@ -50,6 +51,7 @@ export function TarefaCard({ t, hoje, links = [] }: { t: TarefaView; hoje: strin
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="min-w-0 flex-1 basis-64">
           <h3 className="text-[15px] font-medium leading-snug">{t.titulo}</h3>
+          {t.lancamentos && t.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={t.lancamentos} /></p>}
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-tx2">
             {t.cliente ? <span>{t.cliente}</span> : <span className="text-tx3">Interna</span>}
             {t.area && <span className="mono text-tx3">· {t.area}</span>}

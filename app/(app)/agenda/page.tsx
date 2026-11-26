@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
 } from "@/lib/datas";
+import { etiquetasDeTarefas } from "@/lib/lancfiltro";
+import { corTag } from "@/lib/lancamentos";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Area, Opcao, Pessoa } from "@/lib/tipos";
+import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Agenda" };
 export const dynamic = "force-dynamic";
@@ -29,6 +32,7 @@ interface Item {
   rotulo: string | null;
   futuro: boolean;
   data: string | null;
+  lancamentos?: EtiquetaLanc[] | null;
 }
 
 interface EtapaRow {
@@ -60,6 +64,7 @@ interface TarefaRow {
   etapa_atual: number | null;
   prazo: string | null;
   prazo_vez: string | null;
+  lancamentos: EtiquetaLanc[] | null;
 }
 
 const primeiro = (n: string | null) => (n ? n.split(" ")[0] : null);
@@ -69,6 +74,7 @@ function CartaoItem({ i, tom }: { i: Item; tom?: "atrasada" }) {
     <article className={`panel relative overflow-hidden py-2.5 pl-3.5 pr-3 ${i.futuro ? "opacity-70" : ""}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
       <h3 className="text-[13px] font-medium leading-snug">{i.titulo}</h3>
+      {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
       <p className="mt-0.5 text-xs text-tx2">
         {i.cliente ?? "Interna"}
         {i.area && <span className="mono text-tx3"> · {i.area}</span>}
@@ -89,6 +95,9 @@ function Mini({ i }: { i: Item }) {
   return (
     <div title={dica} className={`relative truncate rounded-md bg-panel py-1 pl-2.5 pr-1.5 text-[11px] leading-tight ring-1 ring-[var(--line)] ${i.futuro ? "text-tx3" : "text-tx"}`}>
       <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-md ${i.futuro ? "bg-[var(--line-strong)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
+      {i.lancamentos && i.lancamentos.length > 0 && (
+        <span className="mono mr-1 font-medium" style={{ color: `var(--tag-${corTag(i.lancamentos[0].cor)})` }}>{i.lancamentos.map((e) => e.codigo).join("+")}</span>
+      )}
       {i.titulo}
     </div>
   );
@@ -96,21 +105,23 @@ function Mini({ i }: { i: Item }) {
 
 export default async function Agenda({
   searchParams,
-}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string }> }) {
+}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string; lanc?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   const meuId = auth.user!.id;
   const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
   const admin = eu?.papel === "admin";
 
-  const [pessoasRes, clientesRes, areasRes] = await Promise.all([
+  const [pessoasRes, clientesRes, areasRes, lancRes] = await Promise.all([
     supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("clientes").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
+    supabase.from("lancamentos").select("id,codigo,cor,nome").neq("status", "encerrado").order("codigo"),
   ]);
   const pessoas = (pessoasRes.data ?? []) as Opcao[];
   const clientes = (clientesRes.data ?? []) as Opcao[];
   const areas = (areasRes.data ?? []) as Area[];
+  const lancs = ((lancRes.data ?? []) as LancamentoOpcao[]).filter((l) => l.codigo);
 
   const sp = await searchParams;
   const hoje = hojeSP();
@@ -119,6 +130,7 @@ export default async function Agenda({
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
+  const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
   const nova = ehData(sp.nova) ? sp.nova : null;
   const dono = admin ? (pessoa !== "todas" ? pessoa : null) : meuId;
 
@@ -145,14 +157,15 @@ export default async function Agenda({
     .limit(1000);
   if (dono) etapasQ = etapasQ.eq("responsavel_id", dono);
 
-  const filtrar = <T extends { eq: (c: string, v: string) => T }>(q: T): T => {
+  const filtrar = <T extends { eq: (c: string, v: string) => T; contains: (c: string, v: string[]) => T }>(q: T): T => {
     let r = q;
     if (dono) r = r.eq("responsavel_id", dono);
     if (cliente !== "todos") r = r.eq("cliente_id", cliente);
     if (area !== "todas") r = r.eq("area_id", area);
+    if (lanc !== "todos") r = r.contains("lancamento_ids", [lanc]);
     return r;
   };
-  const colunas = "id,titulo,cliente,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez";
+  const colunas = "id,titulo,cliente,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez,lancamentos";
 
   const [etapasRes, simplesRes, atrasadasRes] = await Promise.all([
     etapasQ,
@@ -165,22 +178,25 @@ export default async function Agenda({
 
   const atrasadasRows = (atrasadasRes.data ?? []) as unknown as TarefaRow[];
   const atrasadasIds = new Set(atrasadasRows.map((t) => t.id));
+  const etapasRows = (etapasRes.data ?? []) as unknown as EtapaRow[];
+  const tagsEtapas = await etiquetasDeTarefas(supabase, etapasRows.map((e) => e.tarefa.id));
 
   const itens: Item[] = [];
-  for (const e of (etapasRes.data ?? []) as unknown as EtapaRow[]) {
+  for (const e of etapasRows) {
     const t = e.tarefa;
     if (t.status === "concluida" || t.arquivada_em) continue;
     if (cliente !== "todos" && t.cliente_id !== cliente) continue;
     if (area !== "todas" && t.area_id !== area) continue;
+    if (lanc !== "todos" && !(tagsEtapas.get(t.id) ?? []).some((x) => x.id === lanc)) continue;
     const atual = t.etapa_atual === e.ordem;
     if (atual && atrasadasIds.has(t.id)) continue;
     itens.push({
       chave: `e-${e.id}`, titulo: t.titulo, cliente: t.cliente?.nome ?? null, area: t.area?.nome ?? null,
-      quem: primeiro(e.responsavel?.nome ?? null), rotulo: e.nome, futuro: t.etapa_atual !== null && e.ordem > t.etapa_atual, data: e.prazo_previsto,
+      quem: primeiro(e.responsavel?.nome ?? null), rotulo: e.nome, futuro: t.etapa_atual !== null && e.ordem > t.etapa_atual, data: e.prazo_previsto, lancamentos: tagsEtapas.get(t.id) ?? null,
     });
   }
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
-    itens.push({ chave: `t-${t.id}`, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo });
+    itens.push({ chave: `t-${t.id}`, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, lancamentos: t.lancamentos });
   }
   const porDia = (d: string) => itens.filter((i) => i.data === d);
 
@@ -194,6 +210,7 @@ export default async function Agenda({
     if (admin && pessoa !== "todas") p.set("pessoa", pessoa);
     if (cliente !== "todos") p.set("cliente", cliente);
     if (area !== "todas") p.set("area", area);
+    if (lanc !== "todos") p.set("lanc", lanc);
     if (novo.nova) p.set("nova", novo.nova);
     const s = p.toString();
     return s ? `/agenda?${s}` : "/agenda";
@@ -231,7 +248,7 @@ export default async function Agenda({
 
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
         <FiltrosVisao base="/agenda" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
-          valores={{ pessoa, cliente, area }} fixos={fixos} />
+          valores={{ pessoa, cliente, area, lanc }} fixos={fixos} lancamentos={lancs} />
         <nav className="flex items-center gap-1.5" aria-label="Período">
           <Link href={href({ data: anterior })} className="btn btn-ghost !h-9 !w-9 !px-0" aria-label="Período anterior"><ChevronLeft size={16} /></Link>
           <span className="mono min-w-[150px] text-center text-[13px] text-tx2">{rotuloPeriodo}</span>
@@ -243,7 +260,7 @@ export default async function Agenda({
       {nova && (
         <div className="mt-6">
           <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
-            modelos={[]} papeisCliente={[]} prazoInicial={nova} fecharHref={href({})} />
+            modelos={[]} papeisCliente={[]} lancamentos={lancs} prazoInicial={nova} fecharHref={href({})} />
         </div>
       )}
 
@@ -264,7 +281,7 @@ export default async function Agenda({
             {atrasadasRows.slice(0, VISIVEIS_ATRASADAS).map((t) => (
               <CartaoItem key={t.id} tom="atrasada" i={{
                 chave: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel),
-                rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez,
+                rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez, lancamentos: t.lancamentos,
               }} />
             ))}
           </div>

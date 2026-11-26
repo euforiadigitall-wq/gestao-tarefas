@@ -22,6 +22,12 @@
   --danger-bg: rgba(180, 35, 24, 0.09);
   --ok: #2f7a3d;
   --ok-bg: rgba(47, 122, 61, 0.1);
+  --tag-azul: #1d5fbf; --tag-azul-bg: rgba(29, 95, 191, 0.1);
+  --tag-verde: #2a7d4f; --tag-verde-bg: rgba(42, 125, 79, 0.1);
+  --tag-roxo: #6b46c1; --tag-roxo-bg: rgba(107, 70, 193, 0.1);
+  --tag-laranja: #b85c0d; --tag-laranja-bg: rgba(184, 92, 13, 0.1);
+  --tag-rosa: #b4306b; --tag-rosa-bg: rgba(180, 48, 107, 0.1);
+  --tag-cinza: #5a6280; --tag-cinza-bg: rgba(90, 98, 128, 0.12);
   color-scheme: light;
 }
 
@@ -46,6 +52,12 @@
   --danger-bg: rgba(255, 123, 123, 0.1);
   --ok: #5fd39a;
   --ok-bg: rgba(95, 211, 154, 0.1);
+  --tag-azul: #7ab0ff; --tag-azul-bg: rgba(122, 176, 255, 0.13);
+  --tag-verde: #6fd9a0; --tag-verde-bg: rgba(111, 217, 160, 0.12);
+  --tag-roxo: #b69cff; --tag-roxo-bg: rgba(182, 156, 255, 0.13);
+  --tag-laranja: #ffb067; --tag-laranja-bg: rgba(255, 176, 103, 0.13);
+  --tag-rosa: #ff8fbd; --tag-rosa-bg: rgba(255, 143, 189, 0.13);
+  --tag-cinza: #98a0b9; --tag-cinza-bg: rgba(152, 160, 185, 0.14);
   color-scheme: dark;
 }
 

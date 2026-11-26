@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { Area, Opcao } from "@/lib/tipos";
+import type { Area, LancamentoOpcao, Opcao } from "@/lib/tipos";
 
 interface Props {
   base: string;
@@ -9,13 +9,14 @@ interface Props {
   pessoas: Opcao[];
   clientes: Opcao[];
   areas: Area[];
-  valores: { pessoa: string; cliente: string; area: string; agrupar?: string };
+  valores: { pessoa: string; cliente: string; area: string; agrupar?: string; lanc?: string };
+  lancamentos?: LancamentoOpcao[];
   fixos?: Record<string, string>;
   comAgrupar?: boolean;
 }
 
 // Filtros que moram na URL, para a visão poder ser compartilhada por link
-export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, fixos = {}, comAgrupar }: Props) {
+export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, fixos = {}, comAgrupar, lancamentos = [] }: Props) {
   const router = useRouter();
 
   function ir(novo: Partial<typeof valores>) {
@@ -25,6 +26,7 @@ export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, f
     if (admin && v.pessoa !== "todas") p.set("pessoa", v.pessoa);
     if (v.cliente !== "todos") p.set("cliente", v.cliente);
     if (v.area !== "todas") p.set("area", v.area);
+    if (v.lanc && v.lanc !== "todos") p.set("lanc", v.lanc);
     if (comAgrupar && v.agrupar && v.agrupar !== "pessoa") p.set("agrupar", v.agrupar);
     const qs = p.toString();
     router.push(qs ? `${base}?${qs}` : base);
@@ -58,6 +60,15 @@ export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, f
           {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </select>
       </div>
+      {lancamentos.length > 0 && (
+        <div>
+          <label htmlFor="v-lanc" className="label mb-1.5 block">Lançamento</label>
+          <select id="v-lanc" className="field !h-9 !w-auto min-w-[150px]" value={valores.lanc ?? "todos"} onChange={(e) => ir({ lanc: e.target.value })}>
+            <option value="todos">Todos</option>
+            {lancamentos.map((l) => <option key={l.id} value={l.id}>{l.codigo}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label htmlFor="v-area" className="label mb-1.5 block">Área</label>
         <select id="v-area" className="field !h-9 !w-auto min-w-[140px]" value={valores.area} onChange={(e) => ir({ area: e.target.value })}>

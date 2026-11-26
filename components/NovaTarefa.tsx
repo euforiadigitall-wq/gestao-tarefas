@@ -6,12 +6,13 @@ import { useState, useTransition } from "react";
 import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
 import { LinksCampo, type ItemLink } from "@/components/LinksCampo";
 import { ddmm } from "@/lib/datas";
-import { PAPEIS_CLIENTE, type Area, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
+import { corTag } from "@/lib/lancamentos";
+import { PAPEIS_CLIENTE, type Area, type LancamentoOpcao, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, prazoInicial, fecharHref,
+  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, lancamentos = [], prazoInicial, fecharHref,
 }: {
-  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[];
+  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[]; lancamentos?: LancamentoOpcao[];
   // Usados pela Agenda: abre já com o dia escolhido e volta para fecharHref ao terminar
   prazoInicial?: string; fecharHref?: string;
 }) {
@@ -32,6 +33,8 @@ export function NovaTarefa({
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [descricao, setDescricao] = useState("");
   const [links, setLinks] = useState<ItemLink[]>([]);
+  const [lancIds, setLancIds] = useState<string[]>([]);
+  const alternarLanc = (id: string) => setLancIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   const papeisDaPeca = modelo
     ? Array.from(new Set(modelo.etapas.map((e) => e.papel).filter((p): p is string => !!p)))
     : [];
@@ -44,11 +47,11 @@ export function NovaTarefa({
     setErro("");
     iniciar(async () => {
       const r = esteira
-        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
-        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId, descricao, links });
+        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
+        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId, descricao, links, lancamentoIds: lancIds });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
-      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({}); setDescricao(""); setLinks([]);
+      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
       fechar();
     });
   }
@@ -132,6 +135,25 @@ export function NovaTarefa({
           </div>
         )}
       </div>
+      {admin && lancamentos.length > 0 && (
+        <div>
+          <p className="label mb-1.5">Lançamento (opcional, pode ser mais de um)</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Lançamentos">
+            {lancamentos.map((l) => {
+              const on = lancIds.includes(l.id);
+              return (
+                <button key={l.id} type="button" aria-pressed={on} onClick={() => alternarLanc(l.id)}
+                  className="chip mono"
+                  style={on
+                    ? { background: `var(--tag-${corTag(l.cor)}-bg)`, color: `var(--tag-${corTag(l.cor)})`, outline: `1px solid var(--tag-${corTag(l.cor)})` }
+                    : { background: "var(--panel2)", color: "var(--tx2)" }}>
+                  {l.codigo}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div>
         <label htmlFor="nt-desc" className="label mb-1.5 flex items-center justify-between">
           <span>Descrição breve (opcional)</span>

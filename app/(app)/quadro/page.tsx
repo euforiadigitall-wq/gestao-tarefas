@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { descreverPrazo, hojeSP } from "@/lib/datas";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Area, Opcao, Pessoa } from "@/lib/tipos";
+import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
 import { corPrazo, trilhoPrazo } from "@/lib/visual";
 
 export const metadata: Metadata = { title: "Quadro" };
@@ -23,37 +24,41 @@ interface Linha {
   prazo: string | null;
   prazo_vez: string | null;
   bloco: string | null;
+  lancamentos: EtiquetaLanc[] | null;
 }
 
 const LIMITE = 500;
 
 export default async function Quadro({
   searchParams,
-}: { searchParams: Promise<{ pessoa?: string; cliente?: string; area?: string; agrupar?: string }> }) {
+}: { searchParams: Promise<{ pessoa?: string; cliente?: string; area?: string; agrupar?: string; lanc?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await supabase.auth.getUser();
   const meuId = auth.user!.id;
   const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
   const admin = eu?.papel === "admin";
 
-  const [pessoasRes, clientesRes, areasRes] = await Promise.all([
+  const [pessoasRes, clientesRes, areasRes, lancRes] = await Promise.all([
     supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("clientes").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
+    supabase.from("lancamentos").select("id,codigo,cor,nome").neq("status", "encerrado").order("codigo"),
   ]);
   const pessoas = (pessoasRes.data ?? []) as Opcao[];
   const clientes = (clientesRes.data ?? []) as Opcao[];
   const areas = (areasRes.data ?? []) as Area[];
+  const lancs = ((lancRes.data ?? []) as LancamentoOpcao[]).filter((l) => l.codigo);
 
   const sp = await searchParams;
   const agrupar = sp.agrupar === "cliente" || sp.agrupar === "etapa" ? sp.agrupar : "pessoa";
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
+  const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
 
   let q = supabase
     .from("v_tarefas")
-    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,bloco")
+    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,bloco,lancamentos")
     .neq("status", "concluida")
     .is("arquivada_em", null)
     .order("prazo_vez", { ascending: true, nullsFirst: false })
@@ -62,6 +67,7 @@ export default async function Quadro({
   else if (pessoa !== "todas") q = q.eq("responsavel_id", pessoa);
   if (cliente !== "todos") q = q.eq("cliente_id", cliente);
   if (area !== "todas") q = q.eq("area_id", area);
+  if (lanc !== "todos") q = q.contains("lancamento_ids", [lanc]);
 
   const { data, error } = await q;
   const tarefas = (data ?? []) as unknown as Linha[];
@@ -100,7 +106,7 @@ export default async function Quadro({
 
       <div className="mt-6">
         <FiltrosVisao base="/quadro" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
-          valores={{ pessoa, cliente, area, agrupar }} comAgrupar />
+          valores={{ pessoa, cliente, area, agrupar, lanc }} lancamentos={lancs} comAgrupar />
       </div>
 
       {error && (
@@ -134,6 +140,7 @@ export default async function Quadro({
                       <article key={t.id} className="panel relative overflow-hidden py-3 pl-4 pr-3">
                         <span className={`absolute inset-y-0 left-0 w-1 ${trilhoPrazo[prazo.tom]}`} aria-hidden="true" />
                         <h3 className="text-sm font-medium leading-snug">{t.titulo}</h3>
+                        {t.lancamentos && t.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={t.lancamentos} /></p>}
                         <p className="mt-1 text-xs text-tx2">
                           {agrupar === "pessoa" ? (t.cliente ?? "Interna") : agrupar === "cliente" ? (t.responsavel ?? "Sem responsável") : `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`}
                           {t.area && <span className="mono text-tx3"> · {t.area}</span>}
