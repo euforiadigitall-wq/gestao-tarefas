@@ -1,0 +1,136 @@
+{
+  "name": "Gestão EuforIA: importar a Base Arco do ClickUp (rodar uma vez)",
+  "nodes": [
+    {
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Rodar agora",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Lista de páginas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "As 31 páginas do doc Base Arco (2ky55gu8-1739), páginas de topo primeiro e depois as subpáginas.",
+      "parameters": {
+        "jsCode": "return [{\"json\": {\"pai\": null, \"titulo\": \"Como usar esta base\", \"pagina_id\": \"2ky55gu8-119\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Curativa (Bianca Assis)\", \"pagina_id\": \"2ky55gu8-139\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Paula Brandão\", \"pagina_id\": \"2ky55gu8-159\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Yuri Reis (ACREIS)\", \"pagina_id\": \"2ky55gu8-179\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Thaimara Ramos\", \"pagina_id\": \"2ky55gu8-199\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Marcio Alex (ENDOSKILLS)\", \"pagina_id\": \"2ky55gu8-219\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Virgínia Arrais\", \"pagina_id\": \"2ky55gu8-239\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Rodrigo Benine (Guia Tira Encardido)\", \"pagina_id\": \"2ky55gu8-259\"}}, {\"json\": {\"pai\": null, \"titulo\": \"TaxAcademy\", \"pagina_id\": \"2ky55gu8-279\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Ana Damata\", \"pagina_id\": \"2ky55gu8-299\"}}, {\"json\": {\"pai\": null, \"titulo\": \"Wong Hon\", \"pagina_id\": \"2ky55gu8-499\"}}, {\"json\": {\"pai\": \"Curativa (Bianca Assis)\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-319\"}}, {\"json\": {\"pai\": \"Curativa (Bianca Assis)\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-539\"}}, {\"json\": {\"pai\": \"Paula Brandão\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-339\"}}, {\"json\": {\"pai\": \"Paula Brandão\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-559\"}}, {\"json\": {\"pai\": \"Yuri Reis (ACREIS)\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-359\"}}, {\"json\": {\"pai\": \"Yuri Reis (ACREIS)\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-579\"}}, {\"json\": {\"pai\": \"Thaimara Ramos\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-379\"}}, {\"json\": {\"pai\": \"Thaimara Ramos\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-599\"}}, {\"json\": {\"pai\": \"Marcio Alex (ENDOSKILLS)\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-399\"}}, {\"json\": {\"pai\": \"Marcio Alex (ENDOSKILLS)\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-619\"}}, {\"json\": {\"pai\": \"Virgínia Arrais\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-419\"}}, {\"json\": {\"pai\": \"Virgínia Arrais\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-639\"}}, {\"json\": {\"pai\": \"Rodrigo Benine (Guia Tira Encardido)\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-439\"}}, {\"json\": {\"pai\": \"Rodrigo Benine (Guia Tira Encardido)\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-659\"}}, {\"json\": {\"pai\": \"TaxAcademy\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-459\"}}, {\"json\": {\"pai\": \"TaxAcademy\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-679\"}}, {\"json\": {\"pai\": \"Ana Damata\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-479\"}}, {\"json\": {\"pai\": \"Ana Damata\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-699\"}}, {\"json\": {\"pai\": \"Wong Hon\", \"titulo\": \"Encontros\", \"pagina_id\": \"2ky55gu8-519\"}}, {\"json\": {\"pai\": \"Wong Hon\", \"titulo\": \"Entre encontros\", \"pagina_id\": \"2ky55gu8-719\"}}];"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Lê página no ClickUp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "notes": "Credencial: a mesma do ClickUp que os outros fluxos usam.",
+      "parameters": {
+        "url": "={{ 'https://api.clickup.com/api/v3/workspaces/90132628296/docs/2ky55gu8-1739/pages/' + $json.pagina_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "clickUpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "content_format",
+              "value": "text/md"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Prepara",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const orig = $('Lista de páginas').all();\nreturn $input.all().map((it, i) => ({ json: { pai: orig[i].json.pai || '', titulo: orig[i].json.titulo, conteudo: String(it.json.content || '') } }));"
+      }
+    },
+    {
+      "id": "b1000000-0000-4000-8000-000000000005",
+      "name": "Grava no gestão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        880,
+        0
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n (a mesma dos fluxos de avisos).",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_base_salvar(nullif($1, ''), $2, $3, 'substituir') as id",
+        "options": {
+          "queryReplacement": "={{ [ $json.pai, $json.titulo, $json.conteudo ] }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Rodar agora": {
+      "main": [
+        [
+          {
+            "node": "Lista de páginas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lista de páginas": {
+      "main": [
+        [
+          {
+            "node": "Lê página no ClickUp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê página no ClickUp": {
+      "main": [
+        [
+          {
+            "node": "Prepara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepara": {
+      "main": [
+        [
+          {
+            "node": "Grava no gestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

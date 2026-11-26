@@ -99,6 +99,7 @@ export async function devolverEtapa(id: string, motivo: string): Promise<Resulta
 export async function criarTarefa(dados: {
   titulo: string;
   prazo: string;
+  horario?: string;
   clienteId: string;
   areaId: string;
   responsavelId: string;
@@ -111,6 +112,8 @@ export async function criarTarefa(dados: {
   if (titulo.length > 200) return { erro: "Use no máximo 200 caracteres no título." };
   if (dados.clienteId && !dados.areaId) return { erro: "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto)." };
   if (dados.prazo && !/^\d{4}-\d{2}-\d{2}$/.test(dados.prazo)) return { erro: "Prazo inválido." };
+  if (dados.horario && !/^([01]\d|2[0-3]):[0-5]\d$/.test(dados.horario)) return { erro: "Horário inválido." };
+  if (dados.horario && !dados.prazo) return { erro: "Escolha o dia para usar um horário." };
   const descricao = (dados.descricao ?? "").trim();
   if (descricao.length > MAX_DESCRICAO) return { erro: `A descrição passou de ${MAX_DESCRICAO} caracteres. Deixe só o essencial e ponha o resto em um link.` };
   const links = prepararLinks(dados.links);
@@ -124,6 +127,7 @@ export async function criarTarefa(dados: {
     titulo,
     notas: descricao || null,
     prazo: dados.prazo || null,
+    horario: dados.horario || null,
     cliente_id: dados.clienteId || null,
     area_id: dados.clienteId ? dados.areaId : null,
     // Membro so cria para si; o banco confere de novo.

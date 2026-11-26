@@ -37,6 +37,7 @@ interface Item {
   rotulo: string | null;
   futuro: boolean;
   data: string | null;
+  horario?: string | null;
   lancamentos?: EtiquetaLanc[] | null;
 }
 
@@ -69,6 +70,7 @@ interface TarefaRow {
   etapa_atual: number | null;
   prazo: string | null;
   prazo_vez: string | null;
+  horario: string | null;
   lancamentos: EtiquetaLanc[] | null;
 }
 
@@ -78,7 +80,7 @@ function CartaoItem({ i, tom, admin }: { i: Item; tom?: "atrasada"; admin?: bool
   return (
     <article className={`panel relative overflow-hidden py-2.5 pl-3.5 pr-3 ${i.futuro ? "opacity-90 border-dashed" : ""}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
-      <h3 className="text-[13px] font-medium leading-snug">{i.titulo}</h3>
+      <h3 className="text-[13px] font-medium leading-snug">{i.horario && <span className="mono mr-1.5 text-tx2">{i.horario.slice(0, 5)}</span>}{i.titulo}</h3>
       {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
       <p className="mt-0.5 text-xs text-tx2">
         {i.cliente ?? "Interna"}
@@ -171,7 +173,7 @@ export default async function Agenda({
     if (lanc !== "todos") r = r.contains("lancamento_ids", [lanc]);
     return r;
   };
-  const colunas = "id,titulo,cliente,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez,lancamentos";
+  const colunas = "id,titulo,cliente,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez,horario,lancamentos";
 
   const [etapasRes, simplesRes, atrasadasRes] = await Promise.all([
     etapasQ,
@@ -202,9 +204,9 @@ export default async function Agenda({
     });
   }
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
-    itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, lancamentos: t.lancamentos });
+    itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, horario: t.horario, lancamentos: t.lancamentos });
   }
-  const porDia = (d: string) => itens.filter((i) => i.data === d);
+  const porDia = (d: string) => itens.filter((i) => i.data === d).sort((x, y) => (x.horario ?? "99:99").localeCompare(y.horario ?? "99:99"));
 
   // Endereços que mantêm filtros e visão
   const href = (novo: { visao?: Visao; data?: string; nova?: string }) => {
@@ -310,7 +312,7 @@ export default async function Agenda({
             <>
               <CabecalhoLista />
               <ul>
-                {itens.filter((i) => i.data).sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "")).map((i) => (
+                {itens.filter((i) => i.data).sort((a, b) => (a.data ?? "").localeCompare(b.data ?? "") || (a.horario ?? "99:99").localeCompare(b.horario ?? "99:99")).map((i) => (
                   <LinhaLista key={i.chave} d={{
                     chave: i.chave, titulo: i.titulo, sub: `${i.cliente ?? "Interna"}${i.area ? ` · ${i.area}` : ""}`, lancamentos: i.lancamentos ?? null,
                     etapa: null, total: 0, acao: i.rotulo, quem: i.quem, prazoTexto: ddmm(i.data!), prazoClasse: "bg-panel2 text-tx2", futuro: i.futuro,

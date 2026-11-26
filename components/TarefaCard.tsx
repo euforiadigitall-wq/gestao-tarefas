@@ -73,7 +73,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
             </p>
           )}
         </div>
-        <span className={`chip ${cores[prazo.tom]}`}>{prazo.texto}</span>
+        <span className={`chip ${cores[prazo.tom]}`}>{prazo.texto}{t.horario ? ` · ${t.horario.slice(0, 5)}` : ""}</span>
         <button type="button" className="btn btn-ghost !h-9 !w-9 !px-0" aria-expanded={detalhes} aria-label={detalhes ? "Fechar detalhes" : "Abrir detalhes"} title="Descrição e links" onClick={() => setDetalhes((v) => !v)}>
           <ChevronDown size={16} className={`transition-transform ${detalhes ? "rotate-180" : ""}`} />
         </button>

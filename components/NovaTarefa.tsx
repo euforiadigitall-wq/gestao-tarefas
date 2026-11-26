@@ -23,6 +23,7 @@ export function NovaTarefa({
   const [erro, setErro] = useState("");
   const [titulo, setTitulo] = useState("");
   const [prazo, setPrazo] = useState(prazoInicial ?? "");
+  const [horario, setHorario] = useState("");
   const [clienteId, setClienteId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [responsavelId, setResponsavelId] = useState(meuId);
@@ -50,9 +51,9 @@ export function NovaTarefa({
     iniciar(async () => {
       const r = esteira
         ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: admin ? Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) : {} })
-        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId, descricao, links, lancamentoIds: lancIds });
+        : await criarTarefa({ titulo, prazo, horario, clienteId, areaId, responsavelId, descricao, links, lancamentoIds: lancIds });
       if (r.erro) return setErro(r.erro);
-      setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
+      setTitulo(""); setPrazo(""); setHorario(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
       setModeloId(""); setBloco(""); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
       fechar();
     });
@@ -93,8 +94,11 @@ export function NovaTarefa({
         )}
         {!esteira && (
           <div>
-            <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo</label>
-            <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
+            <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo e horário (opcional)</label>
+            <div className="flex gap-2">
+              <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => { setPrazo(e.target.value); if (!e.target.value) setHorario(""); }} />
+              <input id="nt-horario" type="time" className="field !w-[110px] shrink-0" aria-label="Horário" disabled={!prazo} value={horario} onChange={(e) => setHorario(e.target.value)} />
+            </div>
           </div>
         )}
         <div>

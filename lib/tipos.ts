@@ -39,6 +39,7 @@ export interface TarefaView {
   bloco: string | null;
   notas: string | null;
   etapas_total?: number;
+  horario?: string | null;
   lancamentos?: EtiquetaLanc[] | null;
 }
 
