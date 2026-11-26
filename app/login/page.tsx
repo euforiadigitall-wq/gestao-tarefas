@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
+import { CampoSenha } from "@/components/CampoSenha";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 function Formulario() {
@@ -40,7 +41,7 @@ function Formulario() {
           <label htmlFor="senha" className="label">Senha</label>
           <Link href="/esqueci" className="text-xs text-tx2 underline-offset-4 hover:text-tx hover:underline">Esqueci minha senha</Link>
         </div>
-        <input id="senha" type="password" required autoComplete="current-password" className="field" placeholder="Sua senha"
+        <CampoSenha id="senha" required autoComplete="current-password" placeholder="Sua senha"
           value={senha} onChange={(e) => setSenha(e.target.value)} />
       </div>
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}

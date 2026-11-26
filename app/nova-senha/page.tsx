@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
+import { CampoSenha } from "@/components/CampoSenha";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export default function NovaSenha() {
@@ -34,11 +35,11 @@ export default function NovaSenha() {
       <form onSubmit={salvar} className="space-y-4">
         <div>
           <label htmlFor="s1" className="label mb-1.5 block">Senha nova</label>
-          <input id="s1" type="password" required autoComplete="new-password" className="field" value={senha} onChange={(e) => setSenha(e.target.value)} />
+          <CampoSenha id="s1" required autoComplete="new-password" value={senha} onChange={(e) => setSenha(e.target.value)} />
         </div>
         <div>
           <label htmlFor="s2" className="label mb-1.5 block">Repita a senha</label>
-          <input id="s2" type="password" required autoComplete="new-password" className="field" value={repete} onChange={(e) => setRepete(e.target.value)} />
+          <CampoSenha id="s2" required autoComplete="new-password" value={repete} onChange={(e) => setRepete(e.target.value)} />
         </div>
         {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
         <button type="submit" disabled={carregando} className="btn btn-primary w-full !h-10">
