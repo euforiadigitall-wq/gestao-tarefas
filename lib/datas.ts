@@ -66,3 +66,31 @@ export function diaSemanaLongo(d: string): string {
 }
 
 export const ehData = (d: string | undefined): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d);
+
+export function inicioMes(d: string): string {
+  return `${d.slice(0, 7)}-01`;
+}
+
+export function fimMes(d: string): string {
+  const [y, m] = d.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+}
+
+export function domingoDe(d: string): string {
+  return somarDias(segundaDe(d), 6);
+}
+
+export function rotuloMes(d: string): string {
+  const [y, m] = d.split("-").map(Number);
+  const t = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(y, m - 1, 1)));
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+export function diaDoMes(d: string): number {
+  return Number(d.slice(8, 10));
+}
+
+export function somarMeses(d: string, n: number): string {
+  const [y, m] = d.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 10);
+}
