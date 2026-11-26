@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarRange, KanbanSquare, Rocket, Sun, UserRound, Users } from "lucide-react";
+import { CalendarRange, History, KanbanSquare, Rocket, Sun, UserRound, Users } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
@@ -52,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="px-2"><Logo /></div>
         <nav className="mt-8 space-y-1" aria-label="Principal">
           <NavLink href="/hoje"><Sun size={17} /> Hoje</NavLink>
+          <NavLink href="/historico"><History size={17} /> Histórico</NavLink>
           <EmBreve icone={<KanbanSquare size={17} />} nome="Quadro" />
           <EmBreve icone={<CalendarRange size={17} />} nome="Cronograma" />
           <EmBreve icone={<Rocket size={17} />} nome="Lançamentos" />
@@ -75,6 +76,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="md:hidden"><Logo compacto /></div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
+            <Link href="/historico" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Histórico" title="Histórico">
+              <History size={16} />
+            </Link>
             <Link href="/conta" className="btn btn-ghost !h-9 !w-9 !px-0 md:hidden" aria-label="Minha conta" title="Minha conta">
               <UserRound size={16} />
             </Link>
