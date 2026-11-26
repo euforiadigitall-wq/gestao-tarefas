@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
@@ -10,6 +10,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 
 function Formulario() {
   const router = useRouter();
+  const linkFalhou = useSearchParams().get("erro") === "link";
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
@@ -44,6 +45,11 @@ function Formulario() {
         <CampoSenha id="senha" required autoComplete="current-password" placeholder="Sua senha"
           value={senha} onChange={(e) => setSenha(e.target.value)} />
       </div>
+      {linkFalhou && !erro && (
+        <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">
+          Esse link não funcionou. Ele vale uma vez só, vence com o tempo e precisa abrir no mesmo navegador em que você pediu. Peça um novo em “Esqueci minha senha” e abra logo.
+        </p>
+      )}
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}
       <button type="submit" disabled={carregando} className="btn btn-primary w-full !h-10">
         {carregando ? <Loader2 size={16} className="animate-spin" /> : null}

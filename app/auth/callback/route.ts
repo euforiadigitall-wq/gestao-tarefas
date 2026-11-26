@@ -14,5 +14,6 @@ export async function GET(req: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${destino}`);
   }
-  return NextResponse.redirect(`${origin}/login`);
+  // Link vencido, ja usado, aberto em outro navegador ou sem codigo: avisa na tela de login.
+  return NextResponse.redirect(`${origin}/login?erro=link`);
 }
