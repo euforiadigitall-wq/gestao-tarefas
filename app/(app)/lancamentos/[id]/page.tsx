@@ -9,7 +9,7 @@ import { MapaLancamento, type Folha, type RamoEtapa } from "@/components/MapaLan
 import { NovoEntregavel } from "@/components/NovoEntregavel";
 import { ddmm, descreverPrazo, hojeSP } from "@/lib/datas";
 import { ETAPAS, TIPOS_ENTREGAVEL, etapaPelasDatas, nomeEtapa } from "@/lib/lancamentos";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { ModeloPeca, Opcao, Pessoa } from "@/lib/tipos";
 import { corPrazo } from "@/lib/visual";
 
@@ -60,9 +60,9 @@ export default async function PaginaLancamento({
 }: { params: Promise<{ id: string }>; searchParams: Promise<{ etapa?: string }> }) {
   const { id } = await params;
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
   const hoje = hojeSP();
 

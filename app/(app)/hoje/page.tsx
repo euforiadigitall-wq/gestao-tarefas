@@ -6,7 +6,7 @@ import { TarefaCard } from "@/components/TarefaCard";
 import { TrocarPessoa } from "@/components/TrocarPessoa";
 import { dataExtensa, hojeSP } from "@/lib/datas";
 import { etiquetasDeTarefas } from "@/lib/lancfiltro";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, LancamentoOpcao, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaLink, TarefaView } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Hoje" };
@@ -51,10 +51,10 @@ function Numero({ rotulo, valor, tom }: { rotulo: string; valor: number; tom?: s
 
 export default async function Hoje({ searchParams }: { searchParams: Promise<{ pessoa?: string }> }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
 
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
 
   const { data: pessoasLista } = await supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome");

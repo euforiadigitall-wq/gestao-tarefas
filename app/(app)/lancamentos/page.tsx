@@ -4,7 +4,7 @@ import { NovoLancamento } from "@/components/NovoLancamento";
 import { Etiqueta } from "@/components/Etiqueta";
 import { ddmm, hojeSP } from "@/lib/datas";
 import { ETAPAS, etapaPelasDatas, nomeEtapa } from "@/lib/lancamentos";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Opcao, Pessoa } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Lançamentos" };
@@ -65,9 +65,9 @@ function Cartao({ l, resumo, hoje }: { l: Lanc; resumo: { tarefas: number; atras
 
 export default async function Lancamentos() {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
   const hoje = hojeSP();
 

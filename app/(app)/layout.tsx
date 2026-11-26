@@ -5,7 +5,7 @@ import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
 import { SairBtn } from "@/components/SairBtn";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Pessoa } from "@/lib/tipos";
 
 function EmBreve({ icone, nome }: { icone: React.ReactNode; nome: string }) {
@@ -20,14 +20,10 @@ function EmBreve({ icone, nome }: { icone: React.ReactNode; nome: string }) {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   if (!auth.user) redirect("/login");
 
-  const { data: pessoa } = await supabase
-    .from("pessoas")
-    .select("id,nome,apelido,email,papel,ativo")
-    .eq("id", auth.user.id)
-    .maybeSingle<Pessoa>();
+  const pessoa = await pessoaAtual();
 
   if (!pessoa || !pessoa.ativo) {
     return (

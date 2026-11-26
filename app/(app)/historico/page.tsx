@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FiltrosHistorico } from "@/components/FiltrosHistorico";
 import { dataHoraSP, dias, diaSP } from "@/lib/datas";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Opcao, Pessoa } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Histórico" };
@@ -33,10 +33,10 @@ export default async function Historico({
   searchParams,
 }: { searchParams: Promise<{ pessoa?: string; periodo?: string; q?: string }> }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
 
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
 
   const { data: pessoasLista } = await supabase.from("pessoas").select("id,nome").order("nome");

@@ -9,7 +9,7 @@ import {
 } from "@/lib/datas";
 import { etiquetasDeTarefas } from "@/lib/lancfiltro";
 import { corTag } from "@/lib/lancamentos";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Agenda" };
@@ -107,9 +107,9 @@ export default async function Agenda({
   searchParams,
 }: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string; lanc?: string }> }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
 
   const [pessoasRes, clientesRes, areasRes, lancRes] = await Promise.all([

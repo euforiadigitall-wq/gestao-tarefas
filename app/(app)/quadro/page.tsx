@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { descreverPrazo, hojeSP } from "@/lib/datas";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
 import { corPrazo, trilhoPrazo } from "@/lib/visual";
 
@@ -33,9 +33,9 @@ export default async function Quadro({
   searchParams,
 }: { searchParams: Promise<{ pessoa?: string; cliente?: string; area?: string; agrupar?: string; lanc?: string }> }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
-  const { data: eu } = await supabase.from("pessoas").select("id,nome,papel").eq("id", meuId).single<Pessoa>();
+  const eu = await pessoaAtual();
   const admin = eu?.papel === "admin";
 
   const [pessoasRes, clientesRes, areasRes, lancRes] = await Promise.all([

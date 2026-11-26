@@ -5,7 +5,7 @@ import { AdminAcessos } from "@/components/AdminAcessos";
 import { AdminClientes } from "@/components/AdminClientes";
 import { AdminPapeis } from "@/components/AdminPapeis";
 import { AdminPessoas } from "@/components/AdminPessoas";
-import { supabaseServer } from "@/lib/supabase/server";
+import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Acesso, Area, ClienteAdmin, PapelCliente, PessoaAdmin } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -20,7 +20,7 @@ const ABAS = [
 
 export default async function Admin({ searchParams }: { searchParams: Promise<{ aba?: string }> }) {
   const supabase = await supabaseServer();
-  const { data: auth } = await supabase.auth.getUser();
+  const { data: auth } = await usuarioAtual();
   if (!auth.user) redirect("/login");
   const meuId = auth.user.id;
 
