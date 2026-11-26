@@ -71,6 +71,13 @@ export interface Acesso {
   area_id: string | null;
 }
 
+export interface TarefaLink {
+  id: string;
+  tarefa_id: string;
+  titulo: string;
+  url: string;
+}
+
 export const PAPEIS_CLIENTE = [
   { codigo: "copy", nome: "Copy" },
   { codigo: "aprovador", nome: "Aprovação" },

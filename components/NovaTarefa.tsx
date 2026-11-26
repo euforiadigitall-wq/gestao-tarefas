@@ -3,6 +3,7 @@
 import { Loader2, Plus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
+import { LinksCampo, type ItemLink } from "@/components/LinksCampo";
 import { PAPEIS_CLIENTE, type Area, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
@@ -21,6 +22,8 @@ export function NovaTarefa({
   const [bloco, setBloco] = useState("");
   const modelo = modelos.find((m) => m.id === modeloId);
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
+  const [descricao, setDescricao] = useState("");
+  const [links, setLinks] = useState<ItemLink[]>([]);
   const papeisDaPeca = modelo
     ? Array.from(new Set(modelo.etapas.map((e) => e.papel).filter((p): p is string => !!p)))
     : [];
@@ -33,11 +36,11 @@ export function NovaTarefa({
     setErro("");
     iniciar(async () => {
       const r = esteira
-        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
-        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId });
+        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
+        : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId, descricao, links });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
-      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({});
+      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({}); setDescricao(""); setLinks([]);
       setAberto(false);
     });
   }
@@ -115,6 +118,21 @@ export function NovaTarefa({
             </select>
           </div>
         )}
+      </div>
+      <div>
+        <label htmlFor="nt-desc" className="label mb-1.5 flex items-center justify-between">
+          <span>Descrição breve (opcional)</span>
+          <span className="mono normal-case text-tx3">{descricao.length}/600</span>
+        </label>
+        <textarea id="nt-desc" className="field" rows={3} maxLength={600} placeholder="O essencial para quem vai fazer. O resto fica no link." value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+      </div>
+      <div>
+        <p className="label mb-1.5">Links (opcional)</p>
+        <LinksCampo
+          itens={links}
+          onAdicionar={(l) => { setLinks((s) => [...s, { chave: `${Date.now()}-${s.length}`, ...l }]); }}
+          onRemover={(k) => setLinks((s) => s.filter((x) => x.chave !== k))}
+        />
       </div>
       {esteira && modelo && (
         <ol className="flex flex-wrap items-center gap-x-2 gap-y-1.5 rounded-lg bg-panel2 px-3 py-2.5 text-[13px] text-tx2" aria-label="Sequência da peça">

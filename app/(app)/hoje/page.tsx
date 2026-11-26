@@ -5,7 +5,7 @@ import { TarefaCard } from "@/components/TarefaCard";
 import { TrocarPessoa } from "@/components/TrocarPessoa";
 import { dataExtensa, hojeSP } from "@/lib/datas";
 import { supabaseServer } from "@/lib/supabase/server";
-import type { Area, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaView } from "@/lib/tipos";
+import type { Area, ModeloPeca, Opcao, PapelCliente, Pessoa, TarefaFila, TarefaLink, TarefaView } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Hoje" };
 export const dynamic = "force-dynamic";
@@ -88,6 +88,11 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   ]);
 
   const tarefas = (tarefasRes.data ?? []) as unknown as TarefaView[];
+  const { data: linksData } = tarefas.length
+    ? await supabase.from("links").select("id,tarefa_id,titulo,url").in("tarefa_id", tarefas.map((t) => t.id)).order("criado_em")
+    : { data: [] as TarefaLink[] };
+  const linksPorTarefa = new Map<string, TarefaLink[]>();
+  for (const l of (linksData ?? []) as TarefaLink[]) linksPorTarefa.set(l.tarefa_id, [...(linksPorTarefa.get(l.tarefa_id) ?? []), l]);
   const hoje = hojeSP();
   const atrasadas = tarefas.filter((t) => t.atrasada);
   const naVez = tarefas.filter((t) => !t.atrasada);
@@ -137,7 +142,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
 
       {atrasadas.length > 0 && (
         <Secao titulo="Atrasadas" n={atrasadas.length} tom="danger">
-          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} />)}
+          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} links={linksPorTarefa.get(t.id) ?? []} />)}
         </Secao>
       )}
 
@@ -148,7 +153,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
             <p className="mt-1 text-sm text-tx2">Quando uma tarefa ou uma etapa chegar para {alvo === meuId ? "você" : nomeAlvo}, ela aparece aqui.</p>
           </div>
         ) : (
-          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} />)
+          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} links={linksPorTarefa.get(t.id) ?? []} />)
         )}
       </Secao>
 

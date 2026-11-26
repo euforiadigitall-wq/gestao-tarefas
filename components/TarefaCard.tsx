@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, Loader2, Undo2 } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { avancarEtapa, concluirTarefa, devolverEtapa } from "@/app/(app)/hoje/actions";
+import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { LinksCampo } from "@/components/LinksCampo";
 import { descreverPrazo, type TomPrazo } from "@/lib/datas";
-import type { TarefaView } from "@/lib/tipos";
+import { rotuloLink } from "@/lib/links";
+import type { TarefaLink, TarefaView } from "@/lib/tipos";
 
 const cores: Record<TomPrazo, string> = {
   atrasada: "bg-dangerbg text-danger",
@@ -19,11 +21,14 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje }: { t: TarefaView; hoje: string }) {
+export function TarefaCard({ t, hoje, links = [] }: { t: TarefaView; hoje: string; links?: TarefaLink[] }) {
   const [pendente, iniciar] = useTransition();
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [erro, setErro] = useState("");
+  const [detalhes, setDetalhes] = useState(false);
+  const [desc, setDesc] = useState(t.notas ?? "");
+  const [salvo, setSalvo] = useState(true);
   const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
   const esteira = t.etapa_atual !== null;
 
@@ -58,6 +63,9 @@ export function TarefaCard({ t, hoje }: { t: TarefaView; hoje: string }) {
           </p>
         </div>
         <span className={`chip ${cores[prazo.tom]}`}>{prazo.texto}</span>
+        <button type="button" className="btn btn-ghost !h-9 !w-9 !px-0" aria-expanded={detalhes} aria-label={detalhes ? "Fechar detalhes" : "Abrir detalhes"} title="Descrição e links" onClick={() => setDetalhes((v) => !v)}>
+          <ChevronDown size={16} className={`transition-transform ${detalhes ? "rotate-180" : ""}`} />
+        </button>
         <div className="flex items-center gap-2">
           {esteira && (
             <button type="button" className="btn btn-ghost" disabled={pendente} onClick={() => setDevolvendo((v) => !v)}>
@@ -75,6 +83,51 @@ export function TarefaCard({ t, hoje }: { t: TarefaView; hoje: string }) {
           </button>
         </div>
       </div>
+
+      {!detalhes && (t.notas || links.length > 0) && (
+        <div className="mt-2.5 space-y-2">
+          {t.notas && <p className="line-clamp-2 whitespace-pre-line text-[13px] text-tx2">{t.notas}</p>}
+          {links.length > 0 && (
+            <ul className="flex flex-wrap gap-2">
+              {links.map((l) => (
+                <li key={l.id}>
+                  <a href={l.url} target="_blank" rel="noopener noreferrer" className="chip bg-infobg text-info hover:underline">
+                    <ExternalLink size={12} aria-hidden="true" /> {rotuloLink(l.url, l.titulo)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {detalhes && (
+        <div className="mt-3 space-y-4 border-t border-[var(--line)] pt-3">
+          <div>
+            <label htmlFor={`d-${t.id}`} className="label mb-1.5 flex items-center justify-between">
+              <span>Descrição</span>
+              <span className="mono normal-case text-tx3">{desc.length}/600</span>
+            </label>
+            <textarea id={`d-${t.id}`} className="field" rows={3} maxLength={600} placeholder="O essencial. O resto fica no link." value={desc}
+              onChange={(e) => { setDesc(e.target.value); setSalvo(false); }} />
+            <div className="mt-2 flex items-center justify-end gap-3">
+              {salvo ? <span className="text-xs text-tx3">Salvo</span> : <span className="text-xs text-tx2">Alterações não salvas</span>}
+              <button type="button" className="btn" disabled={pendente || salvo} onClick={() => rodar(async () => { const r = await salvarDescricao(t.id, desc); if (!r.erro) setSalvo(true); return r; })}>
+                Salvar descrição
+              </button>
+            </div>
+          </div>
+          <div>
+            <p className="label mb-1.5">Links</p>
+            <LinksCampo
+              ocupado={pendente}
+              itens={links.map((l) => ({ chave: l.id, titulo: l.titulo, url: l.url }))}
+              onAdicionar={async (l) => { const r = await adicionarLink(t.id, l); if (r.erro) return r.erro; }}
+              onRemover={(k) => rodar(() => removerLink(k))}
+            />
+          </div>
+        </div>
+      )}
 
       {devolvendo && (
         <div className="mt-3 border-t border-[var(--line)] pt-3">
