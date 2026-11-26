@@ -31,12 +31,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const { aba: pedida } = await searchParams;
   const aba = ABAS.some((a) => a.id === pedida) ? (pedida as (typeof ABAS)[number]["id"]) : "clientes";
 
-  const [clientesRes, pessoasRes, areasRes, acessosRes, papeisRes] = await Promise.all([
+  const [clientesRes, pessoasRes, areasRes, acessosRes, papeisRes, padroesRes] = await Promise.all([
     supabase.from("clientes").select("id,nome,ativo").order("nome"),
     supabase.from("pessoas").select("id,nome,apelido,email,papel,ativo").order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
     supabase.from("acessos").select("pessoa_id,cliente_id,area_id"),
     supabase.from("cliente_papeis").select("cliente_id,papel,pessoa_id"),
+    supabase.from("papel_padrao").select("papel,pessoa_id"),
   ]);
 
   const clientes = (clientesRes.data ?? []) as ClienteAdmin[];
@@ -44,7 +45,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const areas = (areasRes.data ?? []) as Area[];
   const acessos = (acessosRes.data ?? []) as Acesso[];
   const papeis = (papeisRes.data ?? []) as PapelCliente[];
-  const falhou = clientesRes.error || pessoasRes.error || areasRes.error || acessosRes.error || papeisRes.error;
+  const falhou = clientesRes.error || pessoasRes.error || areasRes.error || acessosRes.error || papeisRes.error || padroesRes.error;
 
   return (
     <div className="mx-auto max-w-[920px]">
@@ -80,7 +81,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
             <ReatribuirTarefas pessoas={pessoas.filter((p) => p.ativo).map((p) => ({ id: p.id, nome: p.nome }))} />
           </>
         )}
-        {aba === "papeis" && <AdminPapeis clientes={clientes} pessoas={pessoas} papeis={papeis} />}
+        {aba === "papeis" && <AdminPapeis clientes={clientes} pessoas={pessoas} papeis={papeis} padroes={(padroesRes.data ?? []) as { papel: string; pessoa_id: string }[]} />}
         {aba === "acessos" && (
           <AdminAcessos
             membros={pessoas.filter((p) => p.papel === "membro" && p.ativo)}

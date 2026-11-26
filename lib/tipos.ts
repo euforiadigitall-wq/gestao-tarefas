@@ -88,6 +88,7 @@ export const PAPEIS_CLIENTE = [
   { codigo: "social", nome: "Publicação e disparo" },
   { codigo: "site", nome: "Site" },
   { codigo: "dev", nome: "Dev" },
+  { codigo: "calendario", nome: "Calendário editorial" },
 ] as const;
 
 export interface ModeloPeca {

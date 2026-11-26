@@ -10,9 +10,9 @@ import { corTag } from "@/lib/lancamentos";
 import { PAPEIS_CLIENTE, type Area, type LancamentoOpcao, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, lancamentos = [], prazoInicial, fecharHref,
+  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, padroes = [], lancamentos = [], prazoInicial, fecharHref,
 }: {
-  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[]; lancamentos?: LancamentoOpcao[];
+  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[]; padroes?: { papel: string; pessoa_id: string }[]; lancamentos?: LancamentoOpcao[];
   // Usados pela Agenda: abre já com o dia escolhido e volta para fecharHref ao terminar
   prazoInicial?: string; fecharHref?: string;
 }) {
@@ -26,10 +26,10 @@ export function NovaTarefa({
   const [clienteId, setClienteId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [responsavelId, setResponsavelId] = useState(meuId);
-  const [esteira, setEsteira] = useState(false);
   const [modeloId, setModeloId] = useState("");
   const [bloco, setBloco] = useState("");
   const modelo = modelos.find((m) => m.id === modeloId);
+  const esteira = !!modelo;
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [descricao, setDescricao] = useState("");
   const [links, setLinks] = useState<ItemLink[]>([]);
@@ -39,7 +39,9 @@ export function NovaTarefa({
     ? Array.from(new Set(modelo.etapas.map((e) => e.papel).filter((p): p is string => !!p)))
     : [];
   const sugerido = (papel: string) => papeisCliente.find((x) => x.cliente_id === clienteId && x.papel === papel)?.pessoa_id ?? "";
-  const quem = (papel: string) => escolhas[papel] ?? sugerido(papel);
+  const padrao = (papel: string) => padroes.find((x) => x.papel === papel)?.pessoa_id ?? "";
+  const quem = (papel: string) => escolhas[papel] ?? (sugerido(papel) || padrao(papel));
+  const nomePessoa = (id: string) => pessoas.find((p) => p.id === id)?.nome ?? "";
   const nomePapel = (papel: string) => PAPEIS_CLIENTE.find((p) => p.codigo === papel)?.nome ?? papel;
 
   function enviar(e: React.FormEvent) {
@@ -47,11 +49,11 @@ export function NovaTarefa({
     setErro("");
     iniciar(async () => {
       const r = esteira
-        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) })
+        ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: admin ? Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) : {} })
         : await criarTarefa({ titulo, prazo, clienteId, areaId, responsavelId, descricao, links, lancamentoIds: lancIds });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
-      setModeloId(""); setBloco(""); setEsteira(false); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
+      setModeloId(""); setBloco(""); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
       fechar();
     });
   }
@@ -75,31 +77,21 @@ export function NovaTarefa({
         <h2 className="text-[15px] font-medium">{prazoInicial ? `Nova tarefa para ${ddmm(prazoInicial)}` : "Nova tarefa"}</h2>
         <button type="button" className="btn btn-ghost !h-8 !w-8 !px-0" onClick={fechar} aria-label="Fechar"><X size={16} /></button>
       </div>
-      {admin && !daAgenda && (
-        <div role="tablist" aria-label="Tipo de tarefa" className="inline-flex rounded-lg bg-panel2 p-1">
-          {[{ v: false, n: "Tarefa simples" }, { v: true, n: "Peça com esteira" }].map((o) => (
-            <button key={o.n} type="button" role="tab" aria-selected={esteira === o.v}
-              onClick={() => { setEsteira(o.v); setErro(""); }}
-              className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${esteira === o.v ? "bg-[var(--panel)] font-medium text-tx shadow-sm" : "text-tx2 hover:text-tx"}`}>
-              {o.n}
-            </button>
-          ))}
-        </div>
-      )}
       <div>
         <label htmlFor="nt-titulo" className="label mb-1.5 block">{esteira ? "Nome da peça" : "O que precisa ser feito"}</label>
         <input id="nt-titulo" className="field" required maxLength={200} autoFocus placeholder={esteira ? "Ex.: Carrossel: 3 erros na maquiagem de noiva" : "Ex.: revisar os stories de captação"} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {esteira ? (
+        {modelos.length > 0 && (
           <div>
-            <label htmlFor="nt-modelo" className="label mb-1.5 block">Tipo de peça</label>
-            <select id="nt-modelo" className="field" required value={modeloId} onChange={(e) => { setModeloId(e.target.value); setEscolhas({}); }}>
-              <option value="">Escolha</option>
+            <label htmlFor="nt-modelo" className="label mb-1.5 block">Tipo</label>
+            <select id="nt-modelo" className="field" value={modeloId} onChange={(e) => { setModeloId(e.target.value); setEscolhas({}); setErro(""); }}>
+              <option value="">Tarefa simples</option>
               {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
           </div>
-        ) : (
+        )}
+        {!esteira && (
           <div>
             <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo</label>
             <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => setPrazo(e.target.value)} />
@@ -121,7 +113,7 @@ export function NovaTarefa({
           </select>
           {!clienteId && <p className="mt-1.5 text-xs text-tx3">Escolha um cliente para liberar.</p>}
         </div>
-        {esteira ? (
+        {esteira ? (admin &&
           <div>
             <label htmlFor="nt-bloco" className="label mb-1.5 block">Bloco (opcional)</label>
             <input id="nt-bloco" className="field" maxLength={120} placeholder="Ex.: Captação, dia 1" value={bloco} onChange={(e) => setBloco(e.target.value)} />
@@ -181,15 +173,19 @@ export function NovaTarefa({
       )}
       {esteira && papeisDaPeca.length > 0 && (
         <div>
-          <p className="label mb-2">Quem faz cada função</p>
+          <p className="label mb-2">{admin ? "Quem faz cada função" : "Quem vai fazer"}</p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {papeisDaPeca.map((papel) => (
               <div key={papel}>
                 <label htmlFor={`nt-papel-${papel}`} className="mb-1.5 block text-[13px] text-tx2">{nomePapel(papel)}</label>
-                <select id={`nt-papel-${papel}`} className="field" required value={quem(papel)} onChange={(e) => setEscolhas((s) => ({ ...s, [papel]: e.target.value }))}>
-                  <option value="">Escolha</option>
-                  {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
-                </select>
+                {admin ? (
+                  <select id={`nt-papel-${papel}`} className="field" required value={quem(papel)} onChange={(e) => setEscolhas((s) => ({ ...s, [papel]: e.target.value }))}>
+                    <option value="">Escolha</option>
+                    {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
+                  </select>
+                ) : (
+                  <p id={`nt-papel-${papel}`} className="field flex items-center text-tx2">{nomePessoa(quem(papel)) || "Sem padrão, peça a uma admin"}</p>
+                )}
               </div>
             ))}
           </div>

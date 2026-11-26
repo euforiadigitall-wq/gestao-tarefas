@@ -30,9 +30,10 @@ function traduzir(msg: string | undefined): string {
   if (msg.includes("so o responsavel")) return "Só quem é responsável pela tarefa, ou um admin, pode concluir.";
   if (msg.includes("row-level security")) return "Você não tem permissão para isso.";
   if (msg.includes("ja concluida")) return "Essa tarefa já foi concluída.";
-  if (msg.includes("defina quem faz")) return "Escolha quem faz cada função da peça.";
+  if (msg.includes("defina quem faz")) return "Falta definir quem faz uma função desse tipo. Peça a uma admin em Admin, Papéis.";
+  if (msg.includes("acesso a esse cliente")) return "Você não tem acesso a esse cliente.";
   if (msg.includes("escolha a area")) return "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto).";
-  if (msg.includes("apenas admin")) return "Só admin cria tarefa com esteira.";
+  if (msg.includes("apenas admin")) return "Só admin usa bloco e entregável.";
   if (msg.includes("primeira")) return "Essa já é a primeira etapa, não dá para devolver.";
   return "Não foi possível concluir. Atualize a página e tente de novo.";
 }
@@ -175,13 +176,13 @@ export async function criarTarefaEsteira(dados: {
     p_area: dados.clienteId ? dados.areaId : null,
     p_bloco: dados.bloco.trim().slice(0, 120) || null,
     p_responsaveis: Object.fromEntries(Object.entries(dados.responsaveis).filter(([, v]) => v)),
+    p_notas: descricao || null,
   });
   if (error) return { erro: traduzir(error.message) };
   if (id && (dados.lancamentoIds ?? []).length > 0) {
     const { error: e3 } = await supabase.from("tarefa_lancamentos").insert(dados.lancamentoIds!.map((l) => ({ tarefa_id: id as string, lancamento_id: l })));
     if (e3) { revalidarTudo(); return { erro: "A peça foi criada, mas a etiqueta do lançamento não foi salva. Peça a uma admin para ajustar." }; }
   }
-  if (id && descricao) await supabase.from("tarefas").update({ notas: descricao }).eq("id", id as string);
   if (id && links.ok.length > 0) {
     const { error: e2 } = await supabase.from("links").insert(links.ok.map((l) => ({ ...l, tarefa_id: id as string, criado_por: auth.user!.id })));
     if (e2) { revalidarTudo(); return { erro: "A peça foi criada, mas os links não foram salvos. Abra Detalhes e adicione de novo." }; }

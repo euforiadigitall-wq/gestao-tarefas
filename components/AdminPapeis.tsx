@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { definirPapel, definirPapelParaTodos } from "@/app/(app)/admin/actions";
+import { definirPapel, definirPapelParaTodos, definirPapelPadrao } from "@/app/(app)/admin/actions";
 import { PAPEIS_CLIENTE, type ClienteAdmin, type PapelCliente, type PessoaAdmin } from "@/lib/tipos";
 
 export function AdminPapeis({
-  clientes, pessoas, papeis,
-}: { clientes: ClienteAdmin[]; pessoas: PessoaAdmin[]; papeis: PapelCliente[] }) {
+  clientes, pessoas, papeis, padroes,
+}: { clientes: ClienteAdmin[]; pessoas: PessoaAdmin[]; papeis: PapelCliente[]; padroes: { papel: string; pessoa_id: string }[] }) {
   const [, iniciar] = useTransition();
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -23,12 +23,37 @@ export function AdminPapeis({
     });
   }
 
-  if (ativos.length === 0) return <div className="panel px-6 py-8 text-center text-sm text-tx2">Cadastre clientes na aba Clientes primeiro.</div>;
+  const padrao = (papel: string) => padroes.find((x) => x.papel === papel)?.pessoa_id ?? "";
+
+  const blocoPadrao = (
+    <section className="panel p-5" aria-labelledby="padrao-titulo">
+      <h2 id="padrao-titulo" className="text-[15px] font-medium">Quem faz cada função por padrão</h2>
+      <p className="mt-1 text-[13px] text-tx2">
+        Ao criar uma tarefa de um tipo (Site, Calendário editorial e os outros), cada etapa vai direto para a pessoa da função. Vale para cliente avulso também, e para quem não é admin.
+        Um papel salvo para um cliente (tabela abaixo) vem antes deste padrão.
+      </p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {PAPEIS_CLIENTE.map((p) => (
+          <div key={p.codigo}>
+            <label htmlFor={`padrao-${p.codigo}`} className="mb-1.5 block text-[13px] text-tx2">{p.nome}</label>
+            <select id={`padrao-${p.codigo}`} className="field" value={padrao(p.codigo)}
+              onChange={(e) => rodar(() => definirPapelPadrao(p.codigo, e.target.value))}>
+              <option value="">Sem padrão</option>
+              {ativas.map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  if (ativos.length === 0) return <div className="space-y-5">{blocoPadrao}<div className="panel px-6 py-8 text-center text-sm text-tx2">Cadastre clientes na aba Clientes para definir papéis por cliente.</div></div>;
 
   return (
     <div className="space-y-5">
+      {blocoPadrao}
       <p className="rounded-lg bg-panel2 px-4 py-3 text-[13px] text-tx2">
-        Opcional. Serve só para clientes com equipe fixa: ao criar uma peça, a pessoa já vem sugerida. Quem não tem nada aqui escolhe na hora de criar a peça.
+        Opcional. Serve só para clientes com equipe diferente do padrão: ao criar uma peça, a pessoa do cliente vale no lugar do padrão acima.
         Use a linha &quot;Todos os clientes&quot; para preencher de uma vez e depois ajuste o que for diferente.
       </p>
       {erro && <p role="alert" className="rounded-lg bg-dangerbg px-3 py-2 text-[13px] text-danger">{erro}</p>}

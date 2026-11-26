@@ -141,7 +141,7 @@ export async function definirAcesso(p: {
   return {};
 }
 
-const PAPEIS_OK = ["copy", "aprovador", "design", "social", "site", "dev"];
+const PAPEIS_OK = ["copy", "aprovador", "design", "social", "site", "dev", "calendario"];
 
 export async function definirPapel(clienteId: string, papel: string, pessoaId: string): Promise<Resultado> {
   const ctx = await exigirAdmin();
@@ -185,4 +185,17 @@ export async function reatribuirTarefas(de: string, para: string): Promise<Resul
   }
   for (const rota of ["/hoje", "/quadro", "/agenda", "/metricas", "/lancamentos"]) revalidatePath(rota);
   return { quantidade: Number(data ?? 0) };
+}
+
+export async function definirPapelPadrao(papel: string, pessoaId: string): Promise<Resultado> {
+  const ctx = await exigirAdmin();
+  if ("erro" in ctx) return ctx;
+  if (!PAPEIS_OK.includes(papel)) return { erro: "Função desconhecida." };
+  const { error } = pessoaId
+    ? await ctx.supabase.from("papel_padrao").upsert({ papel, pessoa_id: pessoaId }, { onConflict: "papel" })
+    : await ctx.supabase.from("papel_padrao").delete().eq("papel", papel);
+  if (error) return { erro: traduzir(error.message) };
+  revalidatePath("/admin");
+  revalidatePath("/hoje");
+  return {};
 }
