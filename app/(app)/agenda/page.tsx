@@ -233,8 +233,8 @@ export default async function Agenda({
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
     itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, horario: t.horario, movel: true, lancamentos: t.lancamentos });
   }
-  // Prévia das recorrentes: o que ainda vai ser gerado nesse período (só admin enxerga as regras)
-  if (admin) {
+  // Prévia das recorrentes: o que ainda vai ser gerado nesse período (cada um vê as regras em que é responsável; admin vê todas)
+  {
     const regrasRes = await supabase.from("recorrentes")
       .select("id,titulo,cliente_id,area_id,responsavel_id,responsaveis_extras,lancamento_id,frequencia,dias_semana,intervalo_semanas,dia_mes,ultimo_dia_util,prazo_dias_uteis,horario,inicio,fim,ultima_geracao")
       .eq("ativo", true);
