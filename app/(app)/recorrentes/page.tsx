@@ -40,6 +40,7 @@ export default async function PaginaRecorrentes() {
           lancamentos={((lanRes.data ?? []) as LancamentoOpcao[]).filter((l) => l.codigo)}
           meuId={eu.id}
           hoje={hojeSP()}
+          socia={!!eu.socia}
         />
       </div>
     </div>

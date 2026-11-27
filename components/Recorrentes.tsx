@@ -3,7 +3,9 @@
 import { Loader2, Pause, Pencil, Play, Plus, Trash2, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { alternarRecorrente, excluirRecorrente, gerarAgora, salvarRecorrente, type DadosRecorrente } from "@/app/(app)/recorrentes/actions";
+import { TituloTarefa } from "@/components/TituloTarefa";
 import { ddmm } from "@/lib/datas";
+import { comMarca, ehPessoal, semMarca } from "@/lib/pessoal";
 import type { Area, LancamentoOpcao, Opcao } from "@/lib/tipos";
 
 export interface LinhaRecorrente {
@@ -55,8 +57,8 @@ function vazio(hoje: string, eu: string): DadosRecorrente {
 }
 
 export function Recorrentes({
-  itens, pessoas, clientes, areas, lancamentos, meuId, hoje,
-}: { itens: LinhaRecorrente[]; pessoas: Opcao[]; clientes: Opcao[]; areas: Area[]; lancamentos: LancamentoOpcao[]; meuId: string; hoje: string }) {
+  itens, pessoas, clientes, areas, lancamentos, meuId, hoje, socia = false,
+}: { socia?: boolean; itens: LinhaRecorrente[]; pessoas: Opcao[]; clientes: Opcao[]; areas: Area[]; lancamentos: LancamentoOpcao[]; meuId: string; hoje: string }) {
   const [pendente, iniciar] = useTransition();
   const [editando, setEditando] = useState<string | "novo" | null>(null);
   const [d, setD] = useState<DadosRecorrente>(vazio(hoje, meuId));
@@ -106,6 +108,12 @@ export function Recorrentes({
           <div>
             <label htmlFor="rc-titulo" className="label mb-1.5 block">O que precisa ser feito</label>
             <input id="rc-titulo" className="field" required maxLength={200} autoFocus placeholder="Ex.: Enviar relatório semanal de tráfego" value={d.titulo} onChange={(e) => set("titulo", e.target.value)} />
+            {socia && (
+              <label className="mt-2 flex items-center gap-2 text-[13px] text-tx2">
+                <input type="checkbox" checked={ehPessoal(d.titulo)} onChange={(e) => set("titulo", e.target.checked ? comMarca(d.titulo) : semMarca(d.titulo))} />
+                Pessoal: só você e a outra sócia veem a regra e as tarefas geradas. Admins e membros não.
+              </label>
+            )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
@@ -230,7 +238,7 @@ export function Recorrentes({
           <li key={r.id} className={`panel px-5 py-3.5 ${r.ativo ? "" : "opacity-80"}`}>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <div className="min-w-0 flex-1 basis-64">
-                <p className="text-[15px] font-medium leading-snug">{r.titulo} {!r.ativo && <span className="chip bg-panel2 text-tx2">pausada</span>}</p>
+                <p className="text-[15px] font-medium leading-snug"><TituloTarefa titulo={r.titulo} /> {!r.ativo && <span className="chip bg-panel2 text-tx2">pausada</span>}</p>
                 <p className="mt-0.5 text-[13px] text-tx2">{descreverRegra(r)} · {[r.responsavel_id, ...(r.responsaveis_extras ?? [])].map(nome).filter(Boolean).join(", ")}</p>
                 <p className="mono mt-0.5 text-xs text-tx3">
                   {clientes.find((c) => c.id === r.cliente_id)?.nome ?? "Interna"}
