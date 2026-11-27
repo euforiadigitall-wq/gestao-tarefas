@@ -13,17 +13,19 @@ interface Props {
   lancamentos?: LancamentoOpcao[];
   fixos?: Record<string, string>;
   comAgrupar?: boolean;
+  // Pessoa que a tela abre por padrão (a própria, para admin). Só vai na URL quando for diferente dela.
+  padraoPessoa?: string;
 }
 
 // Filtros que moram na URL, para a visão poder ser compartilhada por link
-export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, fixos = {}, comAgrupar, lancamentos = [] }: Props) {
+export function FiltrosVisao({ base, admin, pessoas, clientes, areas, valores, fixos = {}, comAgrupar, lancamentos = [], padraoPessoa = "todas" }: Props) {
   const router = useRouter();
 
   function ir(novo: Partial<typeof valores>) {
     const v = { ...valores, ...novo };
     const p = new URLSearchParams();
     for (const [k, val] of Object.entries(fixos)) if (val) p.set(k, val);
-    if (admin && v.pessoa !== "todas") p.set("pessoa", v.pessoa);
+    if (admin && v.pessoa !== padraoPessoa) p.set("pessoa", v.pessoa);
     if (v.cliente !== "todos") p.set("cliente", v.cliente);
     if (v.area !== "todas") p.set("area", v.area);
     if (v.lanc && v.lanc !== "todos") p.set("lanc", v.lanc);

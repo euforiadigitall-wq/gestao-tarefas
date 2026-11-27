@@ -56,7 +56,9 @@ export default async function Quadro({
 
   const sp = await searchParams;
   const agrupar = sp.agrupar === "cliente" || sp.agrupar === "etapa" ? sp.agrupar : "pessoa";
-  const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
+  // Admin abre direto na própria visão; "Todas" só quando escolhe (pessoa=todas na URL)
+  const padraoPessoa = pessoas.some((p) => p.id === meuId) ? meuId : "todas";
+  const pessoa = admin ? (sp.pessoa === "todas" ? "todas" : sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : padraoPessoa) : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
   const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
@@ -64,7 +66,7 @@ export default async function Quadro({
   const hrefVisao = (v: "colunas" | "lista") => {
     const p = new URLSearchParams();
     if (v === "lista") p.set("visao", "lista");
-    if (admin && pessoa !== "todas") p.set("pessoa", pessoa);
+    if (admin && pessoa !== padraoPessoa) p.set("pessoa", pessoa);
     if (cliente !== "todos") p.set("cliente", cliente);
     if (area !== "todas") p.set("area", area);
     if (lanc !== "todos") p.set("lanc", lanc);
@@ -123,7 +125,7 @@ export default async function Quadro({
 
       <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
         <FiltrosVisao base="/quadro" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
-          valores={{ pessoa, cliente, area, agrupar, lanc }} lancamentos={lancs} fixos={lista_ ? { visao: "lista" } : {}} comAgrupar />
+          valores={{ pessoa, cliente, area, agrupar, lanc }} padraoPessoa={padraoPessoa} lancamentos={lancs} fixos={lista_ ? { visao: "lista" } : {}} comAgrupar />
       
         <div role="tablist" aria-label="Visão do quadro" className="inline-flex rounded-lg bg-panel2 p-1">
           {([["colunas", "Colunas"], ["lista", "Lista"]] as const).map(([v, n]) => (

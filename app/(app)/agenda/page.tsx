@@ -153,7 +153,9 @@ export default async function Agenda({
   const hoje = hojeSP();
   const visao: Visao = sp.visao === "semana" || sp.visao === "dia" || sp.visao === "lista" ? sp.visao : "mes";
   const data = ehData(sp.data) ? sp.data : hoje;
-  const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
+  // Admin abre direto na própria visão; "Todas" só quando escolhe (pessoa=todas na URL)
+  const padraoPessoa = pessoas.some((p) => p.id === meuId) ? meuId : "todas";
+  const pessoa = admin ? (sp.pessoa === "todas" ? "todas" : sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : padraoPessoa) : "todas";
   const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
   const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
@@ -265,7 +267,7 @@ export default async function Agenda({
     const d = novo.data ?? data;
     if (v !== "mes") p.set("visao", v);
     if (d !== hoje) p.set("data", d);
-    if (admin && pessoa !== "todas") p.set("pessoa", pessoa);
+    if (admin && pessoa !== padraoPessoa) p.set("pessoa", pessoa);
     if (cliente !== "todos") p.set("cliente", cliente);
     if (area !== "todas") p.set("area", area);
     if (lanc !== "todos") p.set("lanc", lanc);
@@ -312,7 +314,7 @@ export default async function Agenda({
 
       <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
         <FiltrosVisao base="/agenda" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
-          valores={{ pessoa, cliente, area, lanc }} fixos={fixos} lancamentos={lancs} />
+          valores={{ pessoa, cliente, area, lanc }} padraoPessoa={padraoPessoa} fixos={fixos} lancamentos={lancs} />
         <nav className="flex items-center gap-1.5" aria-label="Período">
           <Link href={href({ data: anterior })} className="btn btn-ghost !h-9 !w-9 !px-0" aria-label="Período anterior"><ChevronLeft size={16} /></Link>
           <span className="mono min-w-[150px] text-center text-[13px] text-tx2">{rotuloPeriodo}</span>
