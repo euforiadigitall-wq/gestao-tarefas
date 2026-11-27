@@ -108,7 +108,11 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   for (const l of (linksData ?? []) as TarefaLink[]) linksPorTarefa.set(l.tarefa_id, [...(linksPorTarefa.get(l.tarefa_id) ?? []), l]);
   const hoje = hojeSP();
   const atrasadas = tarefas.filter((t) => t.atrasada);
-  const naVez = tarefas.filter((t) => !t.atrasada);
+  // Hoje mostra o que vence hoje ou não tem prazo. O que tem prazo futuro fica recolhido em "Próximos dias".
+  const dia = (t: TarefaView) => t.prazo_vez ?? t.prazo;
+  const abertas = tarefas.filter((t) => !t.atrasada);
+  const naVez = abertas.filter((t) => !dia(t) || (dia(t) as string) <= hoje);
+  const proximas = abertas.filter((t) => dia(t) && (dia(t) as string) > hoje);
 
   const tagsFila = await etiquetasDeTarefas(
     supabase,
@@ -176,6 +180,18 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
           naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} donoId={alvo} links={linksPorTarefa.get(t.id) ?? []} />)
         )}
       </Secao>
+
+      {proximas.length > 0 && (
+        <details className="mt-7 group">
+          <summary className="cursor-pointer select-none text-sm text-tx2 hover:text-tx">
+            <span className="label">Próximos dias</span> <span className="mono ml-1 text-tx3">{String(proximas.length).padStart(2, "0")}</span>
+            <span className="ml-2 text-xs text-tx3">prazo depois de hoje. Clique para ver</span>
+          </summary>
+          <div className="mt-3 space-y-2.5">
+            {proximas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} donoId={alvo} links={linksPorTarefa.get(t.id) ?? []} />)}
+          </div>
+        </details>
+      )}
 
       {itensLanc.length > 0 && (
         <Secao titulo="Do lançamento" n={itensLanc.length}>
