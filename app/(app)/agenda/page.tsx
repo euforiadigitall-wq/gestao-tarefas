@@ -8,6 +8,7 @@ import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import { Arrastavel, DiaAlvo } from "@/components/AgendaArrastar";
 import { ImportarExportar } from "@/components/ImportarExportar";
 import { MaisNoDia } from "@/components/MaisNoDia";
+import { GavetaTarefa } from "@/components/GavetaTarefa";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import { TarefaCard } from "@/components/TarefaCard";
 import {
@@ -92,7 +93,7 @@ function CartaoItem({ i, tom, admin, abrir }: { i: Item; tom?: "atrasada"; admin
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
       <h3 className="text-[13px] font-medium leading-snug">
         {i.horario && <span className="mono mr-1.5 text-tx2">{i.horario.slice(0, 5)}</span>}
-        {abrir ? <Link href={abrir} draggable={false} className="after:absolute after:inset-0 hover:underline">{i.titulo}</Link> : i.titulo}
+        {abrir ? <Link href={abrir} scroll={false} draggable={false} className="after:absolute after:inset-0 hover:underline">{i.titulo}</Link> : i.titulo}
       </h3>
       {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
       <p className="mt-0.5 text-xs text-tx2">
@@ -116,7 +117,7 @@ function Mini({ i, abrir }: { i: Item; abrir?: string }) {
   return (
     <div title={dica} className={`relative truncate rounded-md bg-panel py-1 pl-2.5 pr-1.5 text-[11px] leading-tight ring-1 ring-[var(--line)] ${i.futuro ? "text-tx3" : "text-tx"}`}>
       <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-md ${i.futuro ? "bg-[var(--line-strong)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
-      {abrir && <Link href={abrir} draggable={false} scroll aria-label={`Abrir ${i.titulo}`} className="absolute inset-0 z-[1] rounded-md hover:ring-1 hover:ring-[var(--line-strong)]" />}
+      {abrir && <Link href={abrir} draggable={false} scroll={false} aria-label={`Abrir ${i.titulo}`} className="absolute inset-0 z-[1] rounded-md hover:ring-1 hover:ring-[var(--line-strong)]" />}
       {i.lancamentos && i.lancamentos.length > 0 && (
         <span className="mono mr-1 font-medium" style={{ color: `var(--tag-${corTag(i.lancamentos[0].cor)})` }}>{i.lancamentos.map((e) => e.codigo).join("+")}</span>
       )}
@@ -298,13 +299,9 @@ export default async function Agenda({
       </div>
 
       {aberta && (
-        <section className="mt-6" aria-label="Tarefa aberta">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="label">Tarefa aberta</span>
-            <Link href={href({})} className="btn btn-ghost !h-8">Fechar</Link>
-          </div>
+        <GavetaTarefa fecharHref={href({})}>
           <TarefaCard key={aberta.id} t={aberta} hoje={hoje} admin={admin} pessoas={pessoas} links={linksAbertos} abrirDetalhes />
-        </section>
+        </GavetaTarefa>
       )}
       {tarefaId && !aberta && (
         <p role="status" className="mt-6 rounded-lg bg-panel2 px-4 py-3 text-sm text-tx2">
