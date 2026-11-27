@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLICAS = ["/login", "/esqueci", "/auth/callback"];
+const PUBLICAS = ["/login", "/esqueci", "/auth/callback", "/nova-senha"];
 
 export async function proxy(req: NextRequest) {
   const faltando = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"].filter((n) => !process.env[n]);

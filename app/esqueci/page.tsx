@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Loader2, MailCheck } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
-import { supabaseBrowser } from "@/lib/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 export default function Esqueci() {
   const [email, setEmail] = useState("");
@@ -15,7 +15,11 @@ export default function Esqueci() {
     e.preventDefault();
     setCarregando(true);
     const base = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    await supabaseBrowser().auth.resetPasswordForEmail(email.trim(), {
+    // Fluxo implícito: o link funciona mesmo se for aberto em outro navegador ou no celular (o padrão PKCE exigia o mesmo navegador).
+    const cliente = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+      auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    await cliente.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${base}/auth/callback?next=/nova-senha`,
     });
     // Resposta igual com ou sem cadastro, para nao revelar quem tem login.

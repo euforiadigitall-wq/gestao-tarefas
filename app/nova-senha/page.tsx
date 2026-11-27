@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/AuthShell";
 import { CampoSenha } from "@/components/CampoSenha";
@@ -13,6 +13,18 @@ export default function NovaSenha() {
   const [repete, setRepete] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  // Link do e-mail (fluxo implícito) traz a sessão no #: assume a sessão e limpa o endereço
+  useEffect(() => {
+    const h = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const access_token = h.get("access_token");
+    const refresh_token = h.get("refresh_token");
+    if (!access_token || !refresh_token) return;
+    supabaseBrowser().auth.setSession({ access_token, refresh_token }).then(({ error }) => {
+      window.history.replaceState(null, "", "/nova-senha");
+      if (error) setErro("Esse link venceu ou já foi usado. Peça um link novo em “Esqueci minha senha”.");
+    });
+  }, []);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();

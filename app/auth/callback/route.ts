@@ -14,6 +14,12 @@ export async function GET(req: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${origin}${destino}`);
   }
-  // Link vencido, ja usado, aberto em outro navegador ou sem codigo: avisa na tela de login.
-  return NextResponse.redirect(`${origin}/login?erro=link`);
+  // Link do fluxo implicito: os tokens vem depois do # (o servidor nao enxerga). Uma paginazinha repassa para /nova-senha.
+  const html = `<!doctype html><meta charset="utf-8"><title>Entrando...</title><p style="font-family:sans-serif">Entrando...</p>
+<script>
+var h = location.hash || "";
+if (h.indexOf("access_token=") > -1 && h.indexOf("refresh_token=") > -1) location.replace("/nova-senha" + h);
+else location.replace("/login?erro=link");
+</script>`;
+  return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
