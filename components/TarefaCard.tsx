@@ -2,6 +2,7 @@
 
 import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, transferirTarefa, mudarPrazo, mudarTitulo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
 import { Comentarios } from "@/components/Comentarios";
@@ -26,8 +27,10 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], abrirDetalhes = false, donoId }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[]; abrirDetalhes?: boolean; donoId?: string }) {
+export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], abrirDetalhes = false, donoId, fecharHref }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[]; abrirDetalhes?: boolean; donoId?: string; fecharHref?: string }) {
+  const router = useRouter();
   const [pendente, iniciar] = useTransition();
+  const [feito, setFeito] = useState(false);
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [erro, setErro] = useState("");
@@ -55,6 +58,19 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
       }
     });
   }
+
+  // Concluir: tarefa simples some na hora (volta se der erro). Dentro da gaveta, fecha a gaveta quando o banco confirma.
+  function concluir() {
+    setErro("");
+    if (!esteira && !fecharHref) setFeito(true);
+    iniciar(async () => {
+      const r = await (esteira ? avancarEtapa(t.id) : concluirTarefa(t.id));
+      if (r.erro) { setFeito(false); setErro(r.erro); return; }
+      if (fecharHref) router.replace(fecharHref, { scroll: false });
+    });
+  }
+
+  if (feito) return null;
 
   return (
     <article className="panel relative overflow-hidden pl-5 pr-4 py-3.5">
@@ -97,7 +113,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
             type="button"
             className="btn btn-primary"
             disabled={pendente}
-            onClick={() => rodar(() => (esteira ? avancarEtapa(t.id) : concluirTarefa(t.id)))}
+            onClick={concluir}
           >
             {pendente ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
             {esteira ? "Concluir etapa" : "Concluir"}

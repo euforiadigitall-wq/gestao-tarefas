@@ -15,6 +15,7 @@
   --accent: #0f1b3d;
   --on-accent: #ffffff;
   --gold: #a87a1f;
+  --on-gold: #ffffff;
   --gold-bg: rgba(184, 137, 47, 0.12);
   --info: #0b6e99;
   --info-bg: rgba(11, 110, 153, 0.1);
@@ -45,6 +46,7 @@
   --accent: #e9c46a;
   --on-accent: #1a1405;
   --gold: #e9c46a;
+  --on-gold: #080b14;
   --gold-bg: rgba(233, 196, 106, 0.12);
   --info: #56d4f5;
   --info-bg: rgba(86, 212, 245, 0.1);
@@ -73,6 +75,7 @@
   --color-accent: var(--accent);
   --color-onaccent: var(--on-accent);
   --color-gold: var(--gold);
+  --color-ongold: var(--on-gold);
   --color-goldbg: var(--gold-bg);
   --color-info: var(--info);
   --color-infobg: var(--info-bg);

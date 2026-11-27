@@ -329,7 +329,7 @@ export default async function Agenda({
 
       {aberta && (
         <GavetaTarefa fecharHref={href({})}>
-          <TarefaCard key={aberta.id} t={aberta} hoje={hoje} admin={admin} pessoas={pessoas} links={linksAbertos} abrirDetalhes />
+          <TarefaCard key={aberta.id} t={aberta} hoje={hoje} admin={admin} pessoas={pessoas} links={linksAbertos} abrirDetalhes fecharHref={href({})} />
         </GavetaTarefa>
       )}
       {tarefaId && !aberta && (
@@ -406,7 +406,7 @@ export default async function Agenda({
                 return (
                   <DiaAlvo key={d} data={d} className={`group relative min-h-[116px] border-b border-r border-[var(--line)] p-1.5 ${fds ? "bg-panel2/60" : ""} ${fora ? "opacity-50" : ""}`}>
                     <Link href={href({ visao: "dia", data: d })} aria-label={`Abrir ${diaSemanaLongo(d)}, ${ddmm(d)}`}
-                      className={`mono mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs hover:bg-panel2 ${ehHoje ? "bg-[var(--gold)] font-medium text-white" : "text-tx2"}`}>
+                      className={`mono mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs hover:bg-panel2 ${ehHoje ? "bg-[var(--gold)] font-medium text-ongold" : "text-tx2"}`}>
                       {diaDoMes(d)}
                     </Link>
                     <Link href={href({ nova: d })} scroll={false} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa"
