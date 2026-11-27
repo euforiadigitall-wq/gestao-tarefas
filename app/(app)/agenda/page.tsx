@@ -5,12 +5,14 @@ import { Etiquetas } from "@/components/Etiqueta";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
+import { Arrastavel, DiaAlvo } from "@/components/AgendaArrastar";
 import { ImportarExportar } from "@/components/ImportarExportar";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
 } from "@/lib/datas";
 import { etiquetasDeTarefas } from "@/lib/lancfiltro";
+import { filtroResponsavel } from "@/lib/responsavel";
 import { corTag } from "@/lib/lancamentos";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
@@ -38,6 +40,7 @@ interface Item {
   futuro: boolean;
   data: string | null;
   horario?: string | null;
+  movel?: boolean;
   lancamentos?: EtiquetaLanc[] | null;
 }
 
@@ -75,6 +78,11 @@ interface TarefaRow {
 }
 
 const primeiro = (n: string | null) => (n ? n.split(" ")[0] : null);
+
+// Tarefa simples com dia pode ser arrastada para outro dia (mês e semana). Esteira não: o prazo vem do SLA.
+function Movel({ i, children }: { i: Item; children: React.ReactNode }) {
+  return i.movel && i.tarefaId && i.data ? <Arrastavel id={i.tarefaId} de={i.data}>{children}</Arrastavel> : <>{children}</>;
+}
 
 function CartaoItem({ i, tom, admin }: { i: Item; tom?: "atrasada"; admin?: boolean }) {
   return (
@@ -165,9 +173,9 @@ export default async function Agenda({
     .limit(1000);
   if (dono) etapasQ = etapasQ.eq("responsavel_id", dono);
 
-  const filtrar = <T extends { eq: (c: string, v: string) => T; contains: (c: string, v: string[]) => T }>(q: T): T => {
+  const filtrar = <T extends { eq: (c: string, v: string) => T; contains: (c: string, v: string[]) => T; or: (f: string) => T }>(q: T): T => {
     let r = q;
-    if (dono) r = r.eq("responsavel_id", dono);
+    if (dono) r = r.or(filtroResponsavel(dono));
     if (cliente !== "todos") r = r.eq("cliente_id", cliente);
     if (area !== "todas") r = r.eq("area_id", area);
     if (lanc !== "todos") r = r.contains("lancamento_ids", [lanc]);
@@ -204,7 +212,7 @@ export default async function Agenda({
     });
   }
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
-    itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, horario: t.horario, lancamentos: t.lancamentos });
+    itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, horario: t.horario, movel: true, lancamentos: t.lancamentos });
   }
   const porDia = (d: string) => itens.filter((i) => i.data === d).sort((x, y) => (x.horario ?? "99:99").localeCompare(y.horario ?? "99:99"));
 
@@ -292,10 +300,13 @@ export default async function Agenda({
           </h2>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {atrasadasRows.slice(0, VISIVEIS_ATRASADAS).map((t) => (
-              <CartaoItem key={t.id} tom="atrasada" admin={admin} i={{
+              (() => {
+              const i: Item = {
                 chave: t.id, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel),
-                rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez, lancamentos: t.lancamentos,
-              }} />
+                rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez, movel: t.etapa_atual === null, lancamentos: t.lancamentos,
+              };
+              return <Movel key={t.id} i={i}><CartaoItem tom="atrasada" admin={admin} i={i} /></Movel>;
+            })()
             ))}
           </div>
           {atrasadasRows.length > VISIVEIS_ATRASADAS && (
@@ -339,7 +350,7 @@ export default async function Agenda({
                 const fds = idx % 7 > 4;
                 const ehHoje = d === hoje;
                 return (
-                  <div key={d} className={`group relative min-h-[116px] border-b border-r border-[var(--line)] p-1.5 ${fds ? "bg-panel2/60" : ""} ${fora ? "opacity-50" : ""}`}>
+                  <DiaAlvo key={d} data={d} className={`group relative min-h-[116px] border-b border-r border-[var(--line)] p-1.5 ${fds ? "bg-panel2/60" : ""} ${fora ? "opacity-50" : ""}`}>
                     <Link href={href({ visao: "dia", data: d })} aria-label={`Abrir ${diaSemanaLongo(d)}, ${ddmm(d)}`}
                       className={`mono mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs hover:bg-panel2 ${ehHoje ? "bg-[var(--gold)] font-medium text-white" : "text-tx2"}`}>
                       {diaDoMes(d)}
@@ -349,12 +360,12 @@ export default async function Agenda({
                       <Plus size={14} />
                     </Link>
                     <div className="space-y-1">
-                      {doDia.slice(0, 3).map((i) => <Mini key={i.chave} i={i} />)}
+                      {doDia.slice(0, 3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} /></Movel>)}
                       {doDia.length > 3 && (
                         <Link href={href({ visao: "dia", data: d })} className="block px-1 text-[11px] text-tx2 hover:underline">+{doDia.length - 3} mais</Link>
                       )}
                     </div>
-                  </div>
+                  </DiaAlvo>
                 );
               })}
             </div>
@@ -368,7 +379,7 @@ export default async function Agenda({
             const doDia = porDia(d);
             const ehHoje = d === hoje;
             return (
-              <section key={d} aria-label={`${diaSemanaLongo(d)}, ${ddmm(d)}`} className={`rounded-xl p-2.5 ${ehHoje ? "bg-goldbg/40 ring-1 ring-[var(--gold)]" : ""}`}>
+              <DiaAlvo as="section" key={d} data={d} aria-label={`${diaSemanaLongo(d)}, ${ddmm(d)}`} className={`rounded-xl p-2.5 ${ehHoje ? "bg-goldbg/40 ring-1 ring-[var(--gold)]" : ""}`}>
                 <h2 className="mb-2.5 flex items-baseline justify-between px-0.5">
                   <Link href={href({ visao: "dia", data: d })} className={`text-sm font-medium hover:underline ${ehHoje ? "text-gold" : ""}`}>{diaSemanaLongo(d)}</Link>
                   <span className="mono flex items-center gap-1.5 text-xs text-tx3">
@@ -377,9 +388,9 @@ export default async function Agenda({
                   </span>
                 </h2>
                 <div className="space-y-2">
-                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
+                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <Movel key={i.chave} i={i}><CartaoItem i={i} admin={admin} /></Movel>)}
                 </div>
-              </section>
+              </DiaAlvo>
             );
           })}
         </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FilaCard } from "@/components/FilaCard";
 import { ItemChecklist, type ItemLanc } from "@/components/ItemChecklist";
+import { filtroResponsavel } from "@/lib/responsavel";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import { TarefaCard } from "@/components/TarefaCard";
 import { TrocarPessoa } from "@/components/TrocarPessoa";
@@ -67,8 +68,8 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
   const [tarefasRes, filaRes, clientesRes, areasRes, modelosRes, padroesRes, papeisRes, lancRes, itensRes] = await Promise.all([
     supabase
       .from("v_tarefas")
-      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos,etapas_total,horario")
-      .eq("responsavel_id", alvo)
+      .select("id,titulo,cliente_id,cliente,area,responsavel_id,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos,etapas_total,horario,co_responsavel_ids,co_responsaveis")
+      .or(filtroResponsavel(alvo))
       .neq("status", "concluida")
       .is("arquivada_em", null)
       .order("prazo_vez", { ascending: true, nullsFirst: false })
@@ -160,7 +161,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
 
       {atrasadas.length > 0 && (
         <Secao titulo="Atrasadas" n={atrasadas.length} tom="danger">
-          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} links={linksPorTarefa.get(t.id) ?? []} />)}
+          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} links={linksPorTarefa.get(t.id) ?? []} />)}
         </Secao>
       )}
 
@@ -171,7 +172,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
             <p className="mt-1 text-sm text-tx2">Quando uma tarefa ou uma etapa chegar para {alvo === meuId ? "você" : nomeAlvo}, ela aparece aqui.</p>
           </div>
         ) : (
-          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} links={linksPorTarefa.get(t.id) ?? []} />)
+          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} links={linksPorTarefa.get(t.id) ?? []} />)
         )}
       </Secao>
 

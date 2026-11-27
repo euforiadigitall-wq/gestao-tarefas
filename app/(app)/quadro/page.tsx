@@ -4,6 +4,7 @@ import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import Link from "next/link";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
 import { descreverPrazo, hojeSP } from "@/lib/datas";
+import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
 import { corPrazo, trilhoPrazo } from "@/lib/visual";
@@ -78,8 +79,8 @@ export default async function Quadro({
     .is("arquivada_em", null)
     .order("prazo_vez", { ascending: true, nullsFirst: false })
     .limit(LIMITE);
-  if (!admin) q = q.eq("responsavel_id", meuId);
-  else if (pessoa !== "todas") q = q.eq("responsavel_id", pessoa);
+  if (!admin) q = q.or(filtroResponsavel(meuId));
+  else if (pessoa !== "todas") q = q.or(filtroResponsavel(pessoa));
   if (cliente !== "todos") q = q.eq("cliente_id", cliente);
   if (area !== "todas") q = q.eq("area_id", area);
   if (lanc !== "todos") q = q.contains("lancamento_ids", [lanc]);

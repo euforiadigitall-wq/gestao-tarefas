@@ -3,14 +3,14 @@
 import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { adicionarLink, avancarEtapa, concluirTarefa, devolverEtapa, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, mudarPrazo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
 import { Comentarios } from "@/components/Comentarios";
 import { Esteira } from "@/components/Esteira";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { LinksCampo } from "@/components/LinksCampo";
 import { descreverPrazo, type TomPrazo } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
-import type { TarefaLink, TarefaView } from "@/lib/tipos";
+import type { Opcao, TarefaLink, TarefaView } from "@/lib/tipos";
 
 const cores: Record<TomPrazo, string> = {
   atrasada: "bg-dangerbg text-danger",
@@ -25,7 +25,7 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean }) {
+export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [] }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[] }) {
   const [pendente, iniciar] = useTransition();
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -33,6 +33,9 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
   const [detalhes, setDetalhes] = useState(false);
   const [desc, setDesc] = useState(t.notas ?? "");
   const [salvo, setSalvo] = useState(true);
+  const [novoPrazo, setNovoPrazo] = useState(t.prazo ?? "");
+  const [coIds, setCoIds] = useState<string[]>(t.co_responsavel_ids ?? []);
+  const [coSalvo, setCoSalvo] = useState(true);
   const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
   const esteira = t.etapa_atual !== null;
 
@@ -58,6 +61,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-tx2">
             {t.cliente ? <span>{t.cliente}</span> : <span className="text-tx3">Interna</span>}
             {t.area && <span className="mono text-tx3">· {t.area}</span>}
+            {t.co_responsaveis && <span className="chip bg-panel2 text-tx2" title="Também é responsável">com {t.co_responsaveis}</span>}
             {esteira && (
               <>
                 <span className="text-tx3">·</span>
@@ -74,7 +78,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
           )}
         </div>
         <span className={`chip ${cores[prazo.tom]}`}>{prazo.texto}{t.horario ? ` · ${t.horario.slice(0, 5)}` : ""}</span>
-        <button type="button" className="btn btn-ghost !h-9 !w-9 !px-0" aria-expanded={detalhes} aria-label={detalhes ? "Fechar detalhes" : "Abrir detalhes"} title="Descrição e links" onClick={() => setDetalhes((v) => !v)}>
+        <button type="button" className="btn btn-ghost !h-9 !w-9 !px-0" aria-expanded={detalhes} aria-label={detalhes ? "Fechar detalhes" : "Abrir detalhes"} title="Prazo, descrição e links" onClick={() => setDetalhes((v) => !v)}>
           <ChevronDown size={16} className={`transition-transform ${detalhes ? "rotate-180" : ""}`} />
         </button>
         <div className="flex items-center gap-2">
@@ -114,6 +118,39 @@ export function TarefaCard({ t, hoje, links = [], admin = false }: { t: TarefaVi
 
       {detalhes && (
         <div className="mt-3 space-y-4 border-t border-[var(--line)] pt-3">
+          <div>
+            <label htmlFor={`p-${t.id}`} className="label mb-1.5 block">Prazo</label>
+            {esteira ? (
+              <p className="text-[13px] text-tx2">O prazo desta peça segue o tempo de cada etapa e se ajusta sozinho.</p>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <input id={`p-${t.id}`} type="date" className="field !w-auto" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} />
+                <button type="button" className="btn" disabled={pendente || novoPrazo === (t.prazo ?? "")} onClick={() => rodar(() => mudarPrazo(t.id, novoPrazo))}>
+                  Salvar prazo
+                </button>
+                {t.prazo && <button type="button" className="btn btn-ghost" disabled={pendente} onClick={() => { setNovoPrazo(""); rodar(() => mudarPrazo(t.id, "")); }}>Tirar prazo</button>}
+              </div>
+            )}
+          </div>
+          {admin && !esteira && pessoas.length > 0 && (
+            <div>
+              <p className="label mb-1.5">Mais responsáveis</p>
+              <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Mais responsáveis">
+                {pessoas.filter((p) => p.id !== t.responsavel_id).map((p) => {
+                  const on = coIds.includes(p.id);
+                  return (
+                    <button key={p.id} type="button" aria-pressed={on} onClick={() => { setCoIds((x) => (on ? x.filter((i) => i !== p.id) : [...x, p.id])); setCoSalvo(false); }}
+                      className={`chip ${on ? "bg-infobg text-info" : "bg-panel2 text-tx2"}`}>
+                      {p.nome.split(" ")[0]}
+                    </button>
+                  );
+                })}
+                <button type="button" className="btn" disabled={pendente || coSalvo} onClick={() => rodar(async () => { const r = await definirResponsaveis(t.id, coIds); if (!r.erro) setCoSalvo(true); return r; })}>
+                  Salvar responsáveis
+                </button>
+              </div>
+            </div>
+          )}
           <div>
             <label htmlFor={`d-${t.id}`} className="label mb-1.5 flex items-center justify-between">
               <span>Descrição</span>

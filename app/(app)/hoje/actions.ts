@@ -33,7 +33,8 @@ function traduzir(msg: string | undefined): string {
   if (msg.includes("defina quem faz")) return "Falta definir quem faz uma função desse tipo. Peça a uma admin em Admin, Papéis.";
   if (msg.includes("acesso a esse cliente")) return "Você não tem acesso a esse cliente.";
   if (msg.includes("escolha a area")) return "Escolha a área do cliente (Tráfego, Lançamentos ou Projeto).";
-  if (msg.includes("apenas admin")) return "Só admin usa bloco e entregável.";
+  if (msg.includes("uma pessoa por etapa")) return "Tarefa com esteira tem uma pessoa por etapa.";
+  if (msg.includes("apenas admin")) return "Só admin usa bloco, entregável e mais de um responsável.";
   if (msg.includes("primeira")) return "Essa já é a primeira etapa, não dá para devolver.";
   return "Não foi possível concluir. Atualize a página e tente de novo.";
 }
@@ -53,6 +54,32 @@ export async function salvarDescricao(id: string, texto: string): Promise<Result
   const { error } = await supabase.from("tarefas").update({ notas: t || null }).eq("id", id);
   if (error) return { erro: traduzir(error.message) };
   revalidatePath("/hoje");
+  return {};
+}
+
+// Muda o dia da tarefa simples (ou tira o prazo). Quem pode é o banco que decide: responsáveis e admin.
+export async function mudarPrazo(id: string, prazo: string): Promise<Resultado> {
+  if (prazo && !/^\d{4}-\d{2}-\d{2}$/.test(prazo)) return { erro: "Prazo inválido." };
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase
+    .from("tarefas")
+    .update({ prazo: prazo || null, ...(prazo ? {} : { horario: null }) })
+    .eq("id", id)
+    .is("etapa_atual", null)
+    .neq("status", "concluida")
+    .select("id");
+  if (error) return { erro: traduzir(error.message) };
+  if (!data || data.length === 0) return { erro: "Não foi possível mudar o prazo. Só quem é responsável, ou um admin, muda, e a tarefa não pode estar concluída nem ter esteira." };
+  revalidarTudo();
+  return {};
+}
+
+// Admin: quem mais é responsável por uma tarefa simples (além do principal).
+export async function definirResponsaveis(id: string, pessoas: string[]): Promise<Resultado> {
+  const supabase = await supabaseServer();
+  const { error } = await supabase.rpc("definir_responsaveis", { p_tarefa: id, p_pessoas: pessoas });
+  if (error) return { erro: traduzir(error.message) };
+  revalidarTudo();
   return {};
 }
 
@@ -103,6 +130,7 @@ export async function criarTarefa(dados: {
   clienteId: string;
   areaId: string;
   responsavelId: string;
+  responsaveisExtras?: string[];
   descricao?: string;
   links?: NovoLink[];
   lancamentoIds?: string[];
@@ -136,6 +164,10 @@ export async function criarTarefa(dados: {
     status: "a_fazer",
   }).select("id").single();
   if (error) return { erro: traduzir(error.message) };
+  if (criada && (dados.responsaveisExtras ?? []).length > 0) {
+    const { error: e4 } = await supabase.rpc("definir_responsaveis", { p_tarefa: criada.id, p_pessoas: dados.responsaveisExtras });
+    if (e4) { revalidarTudo(); return { erro: "A tarefa foi criada, mas os outros responsáveis não foram salvos. Abra Detalhes e escolha de novo." }; }
+  }
   if (criada && (dados.lancamentoIds ?? []).length > 0) {
     const { error: e3 } = await supabase.from("tarefa_lancamentos").insert(dados.lancamentoIds!.map((l) => ({ tarefa_id: criada.id, lancamento_id: l })));
     if (e3) { revalidarTudo(); return { erro: "A tarefa foi criada, mas a etiqueta do lançamento não foi salva. Peça a uma admin para ajustar." }; }

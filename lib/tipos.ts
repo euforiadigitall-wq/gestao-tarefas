@@ -40,6 +40,8 @@ export interface TarefaView {
   notas: string | null;
   etapas_total?: number;
   horario?: string | null;
+  co_responsavel_ids?: string[] | null;
+  co_responsaveis?: string | null;
   lancamentos?: EtiquetaLanc[] | null;
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { FiltrosHistorico } from "@/components/FiltrosHistorico";
 import { dataHoraSP, dias, diaSP } from "@/lib/datas";
+import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Opcao, Pessoa } from "@/lib/tipos";
 
@@ -57,8 +58,8 @@ export default async function Historico({
     .order("concluida_em", { ascending: false })
     .limit(LIMITE);
 
-  if (!admin) consulta = consulta.eq("responsavel_id", meuId);
-  else if (pessoa !== "todas") consulta = consulta.eq("responsavel_id", pessoa);
+  if (!admin) consulta = consulta.or(filtroResponsavel(meuId));
+  else if (pessoa !== "todas") consulta = consulta.or(filtroResponsavel(pessoa));
   if (periodo !== "todos") {
     const desde = new Date(Date.now() - Number(periodo) * 86400000).toISOString();
     consulta = consulta.gte("concluida_em", desde);

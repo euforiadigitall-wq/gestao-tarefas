@@ -27,6 +27,7 @@ export function NovaTarefa({
   const [clienteId, setClienteId] = useState("");
   const [areaId, setAreaId] = useState("");
   const [responsavelId, setResponsavelId] = useState(meuId);
+  const [extras, setExtras] = useState<string[]>([]);
   const [modeloId, setModeloId] = useState("");
   const [bloco, setBloco] = useState("");
   const modelo = modelos.find((m) => m.id === modeloId);
@@ -51,9 +52,9 @@ export function NovaTarefa({
     iniciar(async () => {
       const r = esteira
         ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: admin ? Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) : {} })
-        : await criarTarefa({ titulo, prazo, horario, clienteId, areaId, responsavelId, descricao, links, lancamentoIds: lancIds });
+        : await criarTarefa({ titulo, prazo, horario, clienteId, areaId, responsavelId, responsaveisExtras: admin ? extras.filter((x) => x !== responsavelId) : [], descricao, links, lancamentoIds: lancIds });
       if (r.erro) return setErro(r.erro);
-      setTitulo(""); setPrazo(""); setHorario(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId);
+      setTitulo(""); setPrazo(""); setHorario(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId); setExtras([]);
       setModeloId(""); setBloco(""); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
       fechar();
     });
@@ -128,6 +129,18 @@ export function NovaTarefa({
             <select id="nt-resp" className="field" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}>
               {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
             </select>
+            <p className="label mb-1.5 mt-3">Mais responsáveis (opcional)</p>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Mais responsáveis">
+              {pessoas.filter((p) => p.id !== responsavelId).map((p) => {
+                const on = extras.includes(p.id);
+                return (
+                  <button key={p.id} type="button" aria-pressed={on} onClick={() => setExtras((x) => (on ? x.filter((i) => i !== p.id) : [...x, p.id]))}
+                    className={`chip ${on ? "bg-infobg text-info" : "bg-panel2 text-tx2"}`}>
+                    {p.nome.split(" ")[0]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
