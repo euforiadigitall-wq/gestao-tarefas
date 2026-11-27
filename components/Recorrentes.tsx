@@ -12,6 +12,7 @@ export interface LinhaRecorrente {
   cliente_id: string | null;
   area_id: string | null;
   responsavel_id: string;
+  responsaveis_extras: string[] | null;
   lancamento_id: string | null;
   frequencia: "diaria_util" | "semanal" | "mensal";
   dias_semana: number[] | null;
@@ -19,6 +20,7 @@ export interface LinhaRecorrente {
   dia_mes: number | null;
   ultimo_dia_util: boolean;
   prazo_dias_uteis: number;
+  horario: string | null;
   inicio: string;
   fim: string | null;
   notas: string | null;
@@ -47,8 +49,8 @@ export function descreverRegra(r: Pick<LinhaRecorrente, "frequencia" | "dias_sem
 
 function vazio(hoje: string, eu: string): DadosRecorrente {
   return {
-    titulo: "", clienteId: "", areaId: "", responsavelId: eu, lancamentoId: "", frequencia: "semanal", diasSemana: [1], intervaloSemanas: 1,
-    diaMes: 1, ultimoDiaUtil: false, prazoDiasUteis: 1, inicio: hoje, fim: "", notas: "",
+    titulo: "", clienteId: "", areaId: "", responsavelId: eu, responsaveisExtras: [], lancamentoId: "", frequencia: "semanal", diasSemana: [1], intervaloSemanas: 1,
+    diaMes: 1, ultimoDiaUtil: false, prazoDiasUteis: 1, horario: "", inicio: hoje, fim: "", notas: "",
   };
 }
 
@@ -67,9 +69,9 @@ export function Recorrentes({
   function abrir(r?: LinhaRecorrente) {
     setErro(""); setAviso("");
     setD(r ? {
-      titulo: r.titulo, clienteId: r.cliente_id ?? "", areaId: r.area_id ?? "", responsavelId: r.responsavel_id, lancamentoId: r.lancamento_id ?? "",
+      titulo: r.titulo, clienteId: r.cliente_id ?? "", areaId: r.area_id ?? "", responsavelId: r.responsavel_id, responsaveisExtras: r.responsaveis_extras ?? [], lancamentoId: r.lancamento_id ?? "",
       frequencia: r.frequencia, diasSemana: r.dias_semana ?? [1], intervaloSemanas: r.intervalo_semanas, diaMes: r.dia_mes ?? 1,
-      ultimoDiaUtil: r.ultimo_dia_util, prazoDiasUteis: r.prazo_dias_uteis, inicio: r.inicio, fim: r.fim ?? "", notas: r.notas ?? "",
+      ultimoDiaUtil: r.ultimo_dia_util, prazoDiasUteis: r.prazo_dias_uteis, horario: r.horario?.slice(0, 5) ?? "", inicio: r.inicio, fim: r.fim ?? "", notas: r.notas ?? "",
     } : vazio(hoje, meuId));
     setEditando(r ? r.id : "novo");
   }
@@ -111,6 +113,19 @@ export function Recorrentes({
               <select id="rc-quem" className="field" value={d.responsavelId} onChange={(e) => set("responsavelId", e.target.value)}>
                 {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
               </select>
+              <p className="label mb-1.5 mt-3">Mais responsáveis (opcional)</p>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Mais responsáveis">
+                {pessoas.filter((p) => p.id !== d.responsavelId).map((p) => {
+                  const on = d.responsaveisExtras.includes(p.id);
+                  return (
+                    <button key={p.id} type="button" aria-pressed={on}
+                      onClick={() => set("responsaveisExtras", on ? d.responsaveisExtras.filter((i) => i !== p.id) : [...d.responsaveisExtras, p.id])}
+                      className={`chip ${on ? "bg-infobg text-info" : "bg-panel2 text-tx2"}`}>
+                      {p.nome.split(" ")[0]}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <div>
               <label htmlFor="rc-cli" className="label mb-1.5 block">Cliente</label>
@@ -175,8 +190,12 @@ export function Recorrentes({
             )}
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label htmlFor="rc-prazo" className="mb-1.5 block text-[13px] text-tx2">Prazo, em dias úteis depois de gerar</label>
+                <label htmlFor="rc-prazo" className="mb-1.5 block text-[13px] text-tx2">Prazo, em dias úteis depois de gerar (0 = no próprio dia)</label>
                 <input id="rc-prazo" type="number" min={0} max={30} className="field !w-24" value={d.prazoDiasUteis} onChange={(e) => set("prazoDiasUteis", Number(e.target.value))} />
+              </div>
+              <div>
+                <label htmlFor="rc-hora" className="mb-1.5 block text-[13px] text-tx2">Horário (opcional)</label>
+                <input id="rc-hora" type="time" className="field !w-[120px]" value={d.horario} onChange={(e) => set("horario", e.target.value)} />
               </div>
               <div>
                 <label htmlFor="rc-ini" className="mb-1.5 block text-[13px] text-tx2">Começa em</label>
@@ -212,7 +231,7 @@ export function Recorrentes({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
               <div className="min-w-0 flex-1 basis-64">
                 <p className="text-[15px] font-medium leading-snug">{r.titulo} {!r.ativo && <span className="chip bg-panel2 text-tx2">pausada</span>}</p>
-                <p className="mt-0.5 text-[13px] text-tx2">{descreverRegra(r)} · {nome(r.responsavel_id)}</p>
+                <p className="mt-0.5 text-[13px] text-tx2">{descreverRegra(r)} · {[r.responsavel_id, ...(r.responsaveis_extras ?? [])].map(nome).filter(Boolean).join(", ")}</p>
                 <p className="mono mt-0.5 text-xs text-tx3">
                   {clientes.find((c) => c.id === r.cliente_id)?.nome ?? "Interna"}
                   {r.lancamento_id && ` · ${lancamentos.find((l) => l.id === r.lancamento_id)?.codigo ?? ""}`}

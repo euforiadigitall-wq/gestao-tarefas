@@ -12,6 +12,7 @@ export interface DadosRecorrente {
   clienteId: string;
   areaId: string;
   responsavelId: string;
+  responsaveisExtras: string[];
   lancamentoId: string;
   frequencia: "diaria_util" | "semanal" | "mensal";
   diasSemana: number[];
@@ -19,6 +20,7 @@ export interface DadosRecorrente {
   diaMes: number;
   ultimoDiaUtil: boolean;
   prazoDiasUteis: number;
+  horario: string;
   inicio: string;
   fim: string;
   notas: string;
@@ -46,6 +48,7 @@ export async function salvarRecorrente(d: DadosRecorrente, id?: string): Promise
   if (d.fim && (!DATA.test(d.fim) || d.fim < d.inicio)) return { erro: "O fim precisa ser depois do início." };
   if (d.frequencia === "semanal" && d.diasSemana.length === 0) return { erro: "Marque ao menos um dia da semana." };
   if (d.frequencia === "mensal" && !d.ultimoDiaUtil && !(d.diaMes >= 1 && d.diaMes <= 28)) return { erro: "O dia do mês vai de 1 a 28." };
+  if (d.horario && !/^([01]\d|2[0-3]):[0-5]\d$/.test(d.horario)) return { erro: "Horário inválido." };
   if (!(d.prazoDiasUteis >= 0 && d.prazoDiasUteis <= 30)) return { erro: "O prazo vai de 0 a 30 dias úteis." };
   if ((d.notas ?? "").length > 600) return { erro: "A descrição passou de 600 caracteres." };
 
@@ -58,6 +61,7 @@ export async function salvarRecorrente(d: DadosRecorrente, id?: string): Promise
     cliente_id: d.clienteId || null,
     area_id: d.clienteId ? d.areaId : null,
     responsavel_id: d.responsavelId,
+    responsaveis_extras: Array.from(new Set(d.responsaveisExtras.filter((x) => x && x !== d.responsavelId))),
     lancamento_id: d.lancamentoId || null,
     frequencia: d.frequencia,
     dias_semana: d.frequencia === "semanal" ? [...d.diasSemana].sort() : null,
@@ -66,6 +70,7 @@ export async function salvarRecorrente(d: DadosRecorrente, id?: string): Promise
     dia_mes: d.frequencia === "mensal" && !d.ultimoDiaUtil ? d.diaMes : null,
     ultimo_dia_util: d.frequencia === "mensal" && d.ultimoDiaUtil,
     prazo_dias_uteis: d.prazoDiasUteis,
+    horario: d.horario || null,
     inicio: d.inicio,
     fim: d.fim || null,
     notas: d.notas.trim() || null,
