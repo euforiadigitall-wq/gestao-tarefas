@@ -240,3 +240,5 @@ textarea.field {
 .base-md strong { color: var(--tx); font-weight: 600; }
 .base-md a { color: var(--info); text-decoration: underline; text-underline-offset: 2px; }
 .base-md hr { border: 0; border-top: 1px solid var(--line); margin: 1.25em 0; }
+/* Dentro do acordeão, uma quebra de linha simples no texto vira quebra na tela (o texto vem do ClickUp assim). */
+.base-md-sec p { white-space: pre-line; }

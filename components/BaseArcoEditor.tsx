@@ -4,8 +4,9 @@ import { Loader2, Pencil } from "lucide-react";
 import { useState, useTransition } from "react";
 import Markdown from "react-markdown";
 import { salvarPaginaBase } from "@/app/(app)/base-arco/actions";
+import { EncontrosAcordeao } from "@/components/EncontrosAcordeao";
 
-export function BaseArcoEditor({ id, titulo, conteudo }: { id: string; titulo: string; conteudo: string }) {
+export function BaseArcoEditor({ id, titulo, conteudo, acordeao = false }: { id: string; titulo: string; conteudo: string; acordeao?: boolean }) {
   const [editando, setEditando] = useState(false);
   const [texto, setTexto] = useState(conteudo);
   const [erro, setErro] = useState("");
@@ -43,9 +44,13 @@ export function BaseArcoEditor({ id, titulo, conteudo }: { id: string; titulo: s
           </div>
         </div>
       ) : conteudo.trim() ? (
-        <div className="base-md mt-4 text-[14px] leading-relaxed text-tx2">
-          <Markdown>{conteudo}</Markdown>
-        </div>
+        acordeao ? (
+          <EncontrosAcordeao conteudo={conteudo} />
+        ) : (
+          <div className="base-md mt-4 text-[14px] leading-relaxed text-tx2">
+            <Markdown>{conteudo}</Markdown>
+          </div>
+        )
       ) : (
         <p className="mt-4 text-sm text-tx3">Página vazia. Use Editar para escrever.</p>
       )}

@@ -62,7 +62,7 @@ export default async function BaseArco({ searchParams }: { searchParams: Promise
               ))}
             </nav>
           )}
-          {atual && <BaseArcoEditor key={atual.id + atual.atualizado_em} id={atual.id} titulo={atual.pai_id ? `${clienteAtual?.titulo}: ${atual.titulo}` : atual.titulo} conteudo={atual.conteudo} />}
+          {atual && <BaseArcoEditor key={atual.id + atual.atualizado_em} id={atual.id} titulo={atual.pai_id ? `${clienteAtual?.titulo}: ${atual.titulo}` : atual.titulo} conteudo={atual.conteudo} acordeao={!!atual.pai_id} />}
         </div>
       </div>
     </div>
