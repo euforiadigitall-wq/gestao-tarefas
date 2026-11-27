@@ -61,7 +61,7 @@ export function NovaTarefa({
   }
 
   function fechar() {
-    if (fecharHref) router.push(fecharHref);
+    if (fecharHref) router.push(fecharHref, { scroll: false });
     else setAberto(false);
   }
 
@@ -83,7 +83,7 @@ export function NovaTarefa({
         <label htmlFor="nt-titulo" className="label mb-1.5 block">{esteira ? "Nome da peça" : "O que precisa ser feito"}</label>
         <input id="nt-titulo" className="field" required maxLength={200} autoFocus placeholder={esteira ? "Ex.: Carrossel: 3 erros na maquiagem de noiva" : "Ex.: revisar os stories de captação"} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={daAgenda ? "grid grid-cols-2 gap-4" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"}>
         {modelos.length > 0 && (
           <div>
             <label htmlFor="nt-modelo" className="label mb-1.5 block">Tipo</label>
@@ -94,7 +94,7 @@ export function NovaTarefa({
           </div>
         )}
         {!esteira && (
-          <div>
+          <div className={daAgenda ? "col-span-2" : ""}>
             <label htmlFor="nt-prazo" className="label mb-1.5 block">Prazo e horário (opcional)</label>
             <div className="flex gap-2">
               <input id="nt-prazo" type="date" className="field" value={prazo} onChange={(e) => { setPrazo(e.target.value); if (!e.target.value) setHorario(""); }} />
@@ -124,7 +124,7 @@ export function NovaTarefa({
             <input id="nt-bloco" className="field" maxLength={120} placeholder="Ex.: Captação, dia 1" value={bloco} onChange={(e) => setBloco(e.target.value)} />
           </div>
         ) : admin && (
-          <div>
+          <div className={daAgenda ? "col-span-2" : ""}>
             <label htmlFor="nt-resp" className="label mb-1.5 block">Para quem</label>
             <select id="nt-resp" className="field" value={responsavelId} onChange={(e) => setResponsavelId(e.target.value)}>
               {pessoas.map((p) => <option key={p.id} value={p.id}>{p.id === meuId ? `${p.nome} (eu)` : p.nome}</option>)}
@@ -191,7 +191,7 @@ export function NovaTarefa({
       {esteira && papeisDaPeca.length > 0 && (
         <div>
           <p className="label mb-2">{admin ? "Quem faz cada função" : "Quem vai fazer"}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={daAgenda ? "grid grid-cols-2 gap-3" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-4"}>
             {papeisDaPeca.map((papel) => (
               <div key={papel}>
                 <label htmlFor={`nt-papel-${papel}`} className="mb-1.5 block text-[13px] text-tx2">{nomePapel(papel)}</label>

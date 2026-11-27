@@ -389,7 +389,7 @@ export default async function Agenda({
                       className={`mono mb-1 inline-flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-xs hover:bg-panel2 ${ehHoje ? "bg-[var(--gold)] font-medium text-white" : "text-tx2"}`}>
                       {diaDoMes(d)}
                     </Link>
-                    <Link href={href({ nova: d })} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa"
+                    <Link href={href({ nova: d })} scroll={false} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa"
                       className="absolute right-1.5 top-1.5 inline-flex h-6 w-6 items-center justify-center rounded-md text-tx2 opacity-0 transition-opacity hover:bg-panel2 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-60">
                       <Plus size={14} />
                     </Link>
@@ -420,7 +420,7 @@ export default async function Agenda({
                   <Link href={href({ visao: "dia", data: d })} className={`text-sm font-medium hover:underline ${ehHoje ? "text-gold" : ""}`}>{diaSemanaLongo(d)}</Link>
                   <span className="mono flex items-center gap-1.5 text-xs text-tx3">
                     {ddmm(d)}
-                    <Link href={href({ nova: d })} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-tx2 hover:bg-panel2"><Plus size={14} /></Link>
+                    <Link href={href({ nova: d })} scroll={false} aria-label={`Adicionar tarefa em ${ddmm(d)}`} title="Adicionar tarefa" className="inline-flex h-6 w-6 items-center justify-center rounded-md text-tx2 hover:bg-panel2"><Plus size={14} /></Link>
                   </span>
                 </h2>
                 <div className="space-y-2">
@@ -446,7 +446,7 @@ export default async function Agenda({
       {visao === "dia" && (
         <section className="mt-7" aria-label={`${diaSemanaLongo(data)}, ${ddmm(data)}`}>
           <div className="mb-3 flex justify-end">
-            <Link href={href({ nova: data })} className="btn"><Plus size={15} /> Adicionar tarefa neste dia</Link>
+            <Link href={href({ nova: data })} scroll={false} className="btn"><Plus size={15} /> Adicionar tarefa neste dia</Link>
           </div>
           {porDia(data).length === 0 ? (
             <div className="panel px-6 py-10 text-center">
