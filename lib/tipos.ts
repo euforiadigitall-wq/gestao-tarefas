@@ -7,6 +7,7 @@ export interface Pessoa {
   email: string | null;
   papel: Papel;
   ativo: boolean;
+  socia?: boolean;
 }
 
 export interface Opcao {

@@ -1,6 +1,7 @@
 import { Avatar, Esteira } from "@/components/Esteira";
 import { Etiquetas } from "@/components/Etiqueta";
 import type { EtiquetaLanc } from "@/lib/tipos";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 export interface DadosLinha {
   chave: string;
@@ -32,7 +33,7 @@ export function LinhaLista({ d }: { d: DadosLinha }) {
     <li className={`grid items-center gap-x-3 gap-y-1.5 border-t border-[var(--line)] px-4 py-2.5 first:border-t-0 ${GRID} ${d.futuro ? "border-dashed" : ""}`}>
       <span className="flex flex-wrap gap-1">{d.lancamentos && d.lancamentos.length > 0 ? <Etiquetas itens={d.lancamentos} /> : <span className="text-xs text-tx3">sem lançamento</span>}</span>
       <span className="min-w-0">
-        <span className="block truncate text-sm font-medium">{d.titulo}</span>
+        <span className="block truncate text-sm font-medium"><TituloTarefa titulo={d.titulo} /></span>
         <span className="block truncate text-xs text-tx2">{d.sub}</span>
       </span>
       <span className="flex items-center gap-2 text-xs text-tx2">

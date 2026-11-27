@@ -28,8 +28,8 @@ export interface LinhaRecorrente {
   ultima_geracao: string | null;
 }
 
-const DIAS = [{ n: 1, c: "Seg" }, { n: 2, c: "Ter" }, { n: 3, c: "Qua" }, { n: 4, c: "Qui" }, { n: 5, c: "Sex" }];
-const DIA_LONGO: Record<number, string> = { 1: "segunda", 2: "terça", 3: "quarta", 4: "quinta", 5: "sexta" };
+const DIAS = [{ n: 1, c: "Seg" }, { n: 2, c: "Ter" }, { n: 3, c: "Qua" }, { n: 4, c: "Qui" }, { n: 5, c: "Sex" }, { n: 6, c: "Sáb" }, { n: 7, c: "Dom" }];
+const DIA_LONGO: Record<number, string> = { 1: "segunda", 2: "terça", 3: "quarta", 4: "quinta", 5: "sexta", 6: "sábado", 7: "domingo" };
 
 function lista(itens: string[]): string {
   return itens.length <= 1 ? (itens[0] ?? "") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;

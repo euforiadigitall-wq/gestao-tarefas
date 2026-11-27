@@ -11,6 +11,7 @@ import { LinksCampo } from "@/components/LinksCampo";
 import { descreverPrazo, type TomPrazo } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
 import type { Opcao, TarefaLink, TarefaView } from "@/lib/tipos";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 const cores: Record<TomPrazo, string> = {
   atrasada: "bg-dangerbg text-danger",
@@ -58,7 +59,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
       <span className={`absolute inset-y-0 left-0 w-1 ${trilho[prazo.tom]}`} aria-hidden="true" />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <div className="min-w-0 flex-1 basis-64">
-          <h3 className="text-[15px] font-medium leading-snug">{t.titulo}</h3>
+          <h3 className="text-[15px] font-medium leading-snug"><TituloTarefa titulo={t.titulo} /></h3>
           {t.lancamentos && t.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={t.lancamentos} /></p>}
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-tx2">
             {t.cliente ? <span>{t.cliente}</span> : <span className="text-tx3">Interna</span>}

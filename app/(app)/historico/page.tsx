@@ -5,6 +5,7 @@ import { dataHoraSP, dias, diaSP } from "@/lib/datas";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Opcao, Pessoa } from "@/lib/tipos";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 export const metadata: Metadata = { title: "Histórico" };
 export const dynamic = "force-dynamic";
@@ -106,7 +107,7 @@ export default async function Historico({
               <article key={t.id} className="panel px-5 py-3.5">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <div className="min-w-0 flex-1 basis-64">
-                    <h3 className="text-[15px] font-medium leading-snug">{t.titulo}</h3>
+                    <h3 className="text-[15px] font-medium leading-snug"><TituloTarefa titulo={t.titulo} /></h3>
                     <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-tx2">
                       {t.cliente ? <span>{t.cliente}</span> : <span className="text-tx3">Interna</span>}
                       {t.area && <span className="mono text-tx3">· {t.area}</span>}

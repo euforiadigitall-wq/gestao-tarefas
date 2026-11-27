@@ -1,0 +1,61 @@
+{
+  "name": "Gestão EuforIA: recorrentes no fim de semana (8h)",
+  "nodes": [
+    {
+      "id": "a824260a-5f0a-46b1-afcc-6f90bcf1527e",
+      "name": "Sábado e domingo, 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 6,0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4d49a6b5-2ffe-45f7-a59a-e581b457b313",
+      "name": "Gerar tarefas recorrentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        220,
+        0
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n (host e porta do Pooler do Supabase, modo Session, usuário gestao_n8n.pyuosinrvnvqgibzwwcb, banco postgres, SSL ligado).",
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.gerar_recorrentes($1::date) as geradas",
+        "options": {
+          "queryReplacement": "={{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Sábado e domingo, 8h": {
+      "main": [
+        [
+          {
+            "node": "Gerar tarefas recorrentes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false
+}

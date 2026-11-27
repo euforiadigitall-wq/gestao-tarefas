@@ -7,12 +7,13 @@ import { criarTarefa, criarTarefaEsteira } from "@/app/(app)/hoje/actions";
 import { LinksCampo, type ItemLink } from "@/components/LinksCampo";
 import { ddmm } from "@/lib/datas";
 import { corTag } from "@/lib/lancamentos";
+import { comMarca } from "@/lib/pessoal";
 import { PAPEIS_CLIENTE, type Area, type LancamentoOpcao, type ModeloPeca, type Opcao, type PapelCliente } from "@/lib/tipos";
 
 export function NovaTarefa({
-  admin, meuId, clientes, areas, pessoas, modelos, papeisCliente, padroes = [], lancamentos = [], prazoInicial, fecharHref,
+  admin, socia = false, meuId, clientes, areas, pessoas, modelos, papeisCliente, padroes = [], lancamentos = [], prazoInicial, fecharHref,
 }: {
-  admin: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[]; padroes?: { papel: string; pessoa_id: string }[]; lancamentos?: LancamentoOpcao[];
+  admin: boolean; socia?: boolean; meuId: string; clientes: Opcao[]; areas: Area[]; pessoas: Opcao[]; modelos: ModeloPeca[]; papeisCliente: PapelCliente[]; padroes?: { papel: string; pessoa_id: string }[]; lancamentos?: LancamentoOpcao[];
   // Usados pela Agenda: abre já com o dia escolhido e volta para fecharHref ao terminar
   prazoInicial?: string; fecharHref?: string;
 }) {
@@ -34,6 +35,7 @@ export function NovaTarefa({
   const esteira = !!modelo;
   const [escolhas, setEscolhas] = useState<Record<string, string>>({});
   const [descricao, setDescricao] = useState("");
+  const [pessoal, setPessoal] = useState(false);
   const [links, setLinks] = useState<ItemLink[]>([]);
   const [lancIds, setLancIds] = useState<string[]>([]);
   const alternarLanc = (id: string) => setLancIds((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -52,10 +54,10 @@ export function NovaTarefa({
     iniciar(async () => {
       const r = esteira
         ? await criarTarefaEsteira({ titulo, modeloId, clienteId, areaId, bloco, descricao, links, lancamentoIds: lancIds, responsaveis: admin ? Object.fromEntries(papeisDaPeca.map((p) => [p, quem(p)])) : {} })
-        : await criarTarefa({ titulo, prazo, horario, clienteId, areaId, responsavelId, responsaveisExtras: admin ? extras.filter((x) => x !== responsavelId) : [], descricao, links, lancamentoIds: lancIds });
+        : await criarTarefa({ titulo: socia && pessoal ? comMarca(titulo) : titulo, prazo, horario, clienteId, areaId, responsavelId, responsaveisExtras: admin ? extras.filter((x) => x !== responsavelId) : [], descricao, links, lancamentoIds: lancIds });
       if (r.erro) return setErro(r.erro);
       setTitulo(""); setPrazo(""); setHorario(""); setClienteId(""); setAreaId(""); setResponsavelId(meuId); setExtras([]);
-      setModeloId(""); setBloco(""); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]);
+      setModeloId(""); setBloco(""); setEscolhas({}); setDescricao(""); setLinks([]); setLancIds([]); setPessoal(false);
       fechar();
     });
   }
@@ -162,6 +164,12 @@ export function NovaTarefa({
             })}
           </div>
         </div>
+      )}
+      {socia && !esteira && (
+        <label className="flex items-start gap-2 text-[13px] text-tx2">
+          <input type="checkbox" className="mt-0.5" checked={pessoal} onChange={(e) => setPessoal(e.target.checked)} />
+          <span><span className="text-tx">Pessoal</span>: só você e a outra sócia veem. Admins e membros não.</span>
+        </label>
       )}
       <div>
         <label htmlFor="nt-desc" className="label mb-1.5 flex items-center justify-between">

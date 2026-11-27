@@ -50,7 +50,8 @@ function geracoes(r: RegraRecorrente, a: string, b: string): string[] {
   const out: string[] = [];
   const semanaDe = (d: string) => somarDias(d, 1 - isodow(d));
   for (let d = a; d <= b; d = somarDias(d, 1)) {
-    if (!util(d) || d < r.inicio || (r.fim && d > r.fim)) continue;
+    if (d < r.inicio || (r.fim && d > r.fim)) continue;
+    if (!util(d) && r.frequencia !== "semanal") continue; // sábado e domingo só para quem marcou o dia
     if (r.frequencia === "semanal") {
       if (!(r.dias_semana ?? []).includes(isodow(d))) continue;
       const semanas = Math.round((Date.parse(semanaDe(d)) - Date.parse(semanaDe(r.inicio))) / (7 * 864e5));

@@ -10,6 +10,7 @@ import { Etiquetas } from "@/components/Etiqueta";
 import { ddmm } from "@/lib/datas";
 import { rotuloLink } from "@/lib/links";
 import type { EtiquetaLanc } from "@/lib/tipos";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 export interface DadosCard {
   id: string;
@@ -45,7 +46,7 @@ export function CardQuadro({ d, admin }: { d: DadosCard; admin: boolean }) {
       <span className={`absolute inset-y-0 left-0 w-1 ${d.trilho}`} aria-hidden="true" />
       <button type="button" onClick={alternar} aria-expanded={aberto} className="block w-full text-left">
         <span className="flex items-start justify-between gap-2">
-          <span className="text-sm font-medium leading-snug">{d.titulo}</span>
+          <span className="text-sm font-medium leading-snug"><TituloTarefa titulo={d.titulo} /></span>
           <ChevronDown size={16} className={`mt-0.5 shrink-0 text-tx3 transition-transform ${aberto ? "rotate-180" : ""}`} aria-hidden="true" />
         </span>
         {d.lancamentos && d.lancamentos.length > 0 && <span className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={d.lancamentos} /></span>}

@@ -20,6 +20,7 @@ import { filtroResponsavel } from "@/lib/responsavel";
 import { corTag } from "@/lib/lancamentos";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa, TarefaLink, TarefaView } from "@/lib/tipos";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 export const metadata: Metadata = { title: "Agenda" };
 export const dynamic = "force-dynamic";
@@ -94,7 +95,7 @@ function CartaoItem({ i, tom, admin, abrir }: { i: Item; tom?: "atrasada"; admin
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
       <h3 className="text-[13px] font-medium leading-snug">
         {i.horario && <span className="mono mr-1.5 text-tx2">{i.horario.slice(0, 5)}</span>}
-        {abrir ? <Link href={abrir} scroll={false} draggable={false} className="after:absolute after:inset-0 hover:underline">{i.titulo}</Link> : i.titulo}
+        {abrir ? <Link href={abrir} scroll={false} draggable={false} className="after:absolute after:inset-0 hover:underline"><TituloTarefa titulo={i.titulo} /></Link> : <TituloTarefa titulo={i.titulo} />}
       </h3>
       {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
       <p className="mt-0.5 text-xs text-tx2">
@@ -123,7 +124,7 @@ function Mini({ i, abrir }: { i: Item; abrir?: string }) {
         <span className="mono mr-1 font-medium" style={{ color: `var(--tag-${corTag(i.lancamentos[0].cor)})` }}>{i.lancamentos.map((e) => e.codigo).join("+")}</span>
       )}
       {i.horario && <span className="mono mr-1 text-tx2">{i.horario.slice(0, 5)}</span>}
-      {i.titulo}
+      <TituloTarefa titulo={i.titulo} />
     </div>
   );
 }
@@ -337,7 +338,7 @@ export default async function Agenda({
 
       {nova && (
         <div>
-          <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
+          <NovaTarefa key={nova} admin={admin} socia={!!eu?.socia} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
             modelos={[]} papeisCliente={[]} lancamentos={lancs} prazoInicial={nova} fecharHref={href({})} />
         </div>
       )}

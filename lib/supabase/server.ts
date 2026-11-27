@@ -33,7 +33,7 @@ export const pessoaAtual = cache(async (): Promise<Pessoa | null> => {
   if (!auth.user) return null;
   const { data } = await (await supabaseServer())
     .from("pessoas")
-    .select("id,nome,apelido,email,papel,ativo")
+    .select("id,nome,apelido,email,papel,ativo,socia")
     .eq("id", auth.user.id)
     .maybeSingle<Pessoa>();
   return data ?? null;

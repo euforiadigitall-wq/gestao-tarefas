@@ -7,6 +7,7 @@ import { comHora, descreverPrazo, hojeSP } from "@/lib/datas";
 import { supabaseServer } from "@/lib/supabase/server";
 import { PAPEIS_CLIENTE, type EtiquetaLanc } from "@/lib/tipos";
 import { corPrazo } from "@/lib/visual";
+import { TituloTarefa } from "@/components/TituloTarefa";
 
 export const metadata: Metadata = { title: "Cliente" };
 export const dynamic = "force-dynamic";
@@ -101,7 +102,7 @@ export default async function PaginaCliente({ params }: { params: Promise<{ id: 
                   return (
                     <li key={t.id} className="panel flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3">
                       <div className="min-w-0 flex-1 basis-56">
-                        <p className="text-[15px] font-medium leading-snug">{t.titulo}</p>
+                        <p className="text-[15px] font-medium leading-snug"><TituloTarefa titulo={t.titulo} /></p>
                         {t.lancamentos && t.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={t.lancamentos} /></p>}
                         <p className="mt-0.5 text-[13px] text-tx2">
                           {t.responsavel?.split(" ")[0] ?? "Sem responsável"}

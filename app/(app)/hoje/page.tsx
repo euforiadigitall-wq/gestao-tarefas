@@ -136,6 +136,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
       <div className="mt-6">
         <NovaTarefa
           admin={admin}
+          socia={!!eu?.socia}
           meuId={meuId}
           clientes={(clientesRes.data ?? []) as Opcao[]}
           areas={(areasRes.data ?? []) as Area[]}

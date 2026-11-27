@@ -1,0 +1,524 @@
+{
+  "name": "Tráfego e Página · Formulário respondido (gestão)",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1Zxp42iAg9-Z402QARbrXALb8Bgk6cOtouayUHqhRN9E",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 279468060,
+          "mode": "list",
+          "cachedResultName": "Respostas ao formulário 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Zxp42iAg9-Z402QARbrXALb8Bgk6cOtouayUHqhRN9E/edit#gid=279468060"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "899f3ef1-83f6-44e6-a74d-2aae172c12b1",
+      "name": "Nova resposta do formulário",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2400,
+        208
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "QOOSU5YliOoghnNI",
+          "name": "Google Sheets EuforIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// EDITE AQUI uma vez. Telefones: só dígitos com DDI.\nreturn [{ json: {\n  PORTAL_URL: 'https://portal.euforiadigital.com',\n  UAZAPI_URL: 'https://euforiadigitallcom.uazapi.com',\n  CRM_REST: 'https://pyuosinrvnvqgibzwwcb.supabase.co/rest/v1',\n  CRM_WEBHOOK: 'https://nnwb.euforiadigital.com/webhook/crm-euforia-7f3k9q2m',\n  ESTAGIO_FECHADO: '6d554f5f-d266-4819-9ce1-4432f54c84c1',\n  CLICKUP_LISTA: '901322534379',\n  WPP_IZA: '5521997164135',\n  WPP_ISA: '5521967820955',\n  WPP_BIA: '557581088730',\n  CLICKUP_IZA: 248522160,\n  CLICKUP_ISA: 106196887,\n  CLICKUP_BIA: 101714473,\n  MODELO_OPENAI: 'gpt-5',\n  CLICKUP_LISTA_TRAFEGO: '1000240000002698',\n  FORM_DIAGNOSTICO: 'https://forms.gle/XcPEp8dKcmk5JstN6',\n  GUIA_CRIATIVOS: 'https://claude.ai/artifact/TWHLz4z8Y2sPbGPiEaLecX',\n  EMAIL_ACESSO_META: 'coproducaodigital.lancamento@gmail.com',\n  PISO_FECHADO: '2026-11-05'\n}}];"
+      },
+      "id": "e63c5aee-d61e-491d-b18a-22d64b3710f9",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2208,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Usa sempre a linha MAIS NOVA que o gatilho trouxe (o gatilho pode trazer várias; a primeira é a mais antiga).\nconst linhas = $('Nova resposta do formulário').all();\nconst r = linhas[linhas.length - 1].json;\nconst pega = (frag) => { const k = Object.keys(r).find(k => k.toLowerCase().includes(frag)); return k ? String(r[k] || '').trim() : ''; };\n// Todos os e-mails que aparecem em qualquer resposta: o do Google (Endereço de e-mail) e o que a pessoa digitou.\nconst reEmail = /[^\\s@<>(),;:\"']+@[^\\s@<>(),;:\"']+\\.[a-z]{2,}/gi;\nconst emails = [...new Set(Object.values(r).flatMap(v => String(v || '').match(reEmail) || []).map(e => e.toLowerCase()))];\nlet nome = pega('nome completo') || pega('nome');\nif (nome.includes('@')) nome = '';\nconst primeiro = (nome.split(/\\s+/)[0] || '').replace(/[^\\p{L}]/gu, '');\nconst partes = emails.map(e => 'contato_email.ilike.' + encodeURIComponent(e));\nif (primeiro.length >= 3) partes.push('titulo.ilike.*' + encodeURIComponent(primeiro) + '*');\nconst filtro = partes.length ? partes.join(',') : 'titulo.eq.__nada__';\nconst texto = Object.entries(r).filter(([k, v]) => v !== '' && v != null && !/^row_number$/i.test(k)).map(([k, v]) => `${k}\\n${v}`).join('\\n\\n');\nreturn [{ json: { email: emails[0] || '', emails, nome: nome || emails[0] || '', texto, filtro, linha: r.row_number || null } }];"
+      },
+      "id": "5c9a0f31-1b45-438e-89c7-ebbd5c641c11",
+      "name": "Lê resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2000,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Config').first().json.CRM_REST + '/oportunidades?select=id,titulo,contato_whatsapp,contato_email,oportunidade_produtos(produtos!oportunidade_produtos_produto_id_fkey(slug)),clientes!clientes_oportunidade_id_fkey(cliente_produtos(produtos!cliente_produtos_produto_id_fkey(slug)))&or=(' + $('Lê resposta').first().json.filtro + ')' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept-Profile",
+              "value": "crm"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5f5fa080-1ecd-4a55-a3af-a9ef968d464c",
+      "name": "Busca card no CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1808,
+        208
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bY1A127fkqjjDNpL",
+          "name": "Supabase Euforia"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const x = $('Lê resposta').item.json;\nconst todos = ($input.all() || []).map(i => i.json).filter(c => c && c.id);\nconst porEmail = todos.filter(c => (x.emails || []).includes((c.contato_email || '').trim().toLowerCase()));\nconst porNome = todos.filter(c => x.nome && !x.nome.includes('@') && String(c.titulo || '').toLowerCase().split(/\\s+/).slice(0, 2).every(p => x.nome.toLowerCase().includes(p)));\nconst cards = porEmail.length ? porEmail : porNome;\nconst card = cards.length === 1 ? cards[0] : null;\nlet tel = String((card && card.contato_whatsapp) || '').replace(/\\D/g, '');\nif (tel && (tel.length === 10 || tel.length === 11)) tel = '55' + tel;\n// Escopo contratado (ficha do cliente, aba Clientes) vale mais que o da proposta (card do pipeline).\nconst slugsDe = (c) => { const doCliente = (c.clientes || []).flatMap(cl => (cl.cliente_produtos || []).map(p => (p.produtos || {}).slug || '')).filter(Boolean); return doCliente.length ? doCliente : (c.oportunidade_produtos || []).map(p => (p.produtos || {}).slug || '').filter(Boolean); };\nconst slugs = card ? slugsDe(card) : [];\nconst arco = slugs.some(s => s.startsWith('arco'));\nreturn [{ json: { ok: !!card, qtd: cards.length, card_id: card ? card.id : null, cliente: card ? card.titulo : x.nome, primeiro: String((card ? card.titulo : x.nome) || '').split(/\\s+/)[0], tel, email: x.email, texto: x.texto,\n  trafego: !arco && slugs.some(s => s.startsWith('trafego')), pagina: !arco && slugs.includes('pagina-vendas'), arco } }];"
+      },
+      "id": "e6b04a5a-4a49-4451-9bec-30333f7f8120",
+      "name": "Acha o card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1600,
+        208
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "32d23e6d-3156-4945-9b5e-d221b69cee58",
+              "leftValue": "={{ $json.ok && ($json.trafego || $json.pagina) }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "abac2b33-1a5f-4a1e-a9fa-5031cff3b4c9",
+      "name": "Tráfego ou Página?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1408,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.UAZAPI_URL + '/send/text' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Config').first().json.WPP_IZA, text: 'Chegou resposta no formulário de diagnóstico de ' + ($('Lê resposta').first().json.nome || '(sem nome)') + ' (' + $('Lê resposta').first().json.email + '), mas ' + ($json.arco ? 'o card é de cliente Arco (o diagnóstico da Arco é pelo portal).' : ($json.ok ? 'o card não tem Tráfego nem Página marcados no escopo.' : 'não achei um card único no CRM com esse e-mail ou nome. Nada foi criado.')) }) }}",
+        "options": {}
+      },
+      "id": "dd1808b9-4d12-4fd3-9663-328e32874e23",
+      "name": "Avisa: resposta sem card",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "agVcvHRIMmMN8wTJ",
+          "name": "UazAPI EuforIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: $('Config').first().json.MODELO_OPENAI, instructions: \"Você resume, para a Iza (sócia da EuforIA Digital), o formulário de diagnóstico que um novo cliente acabou de preencher. Uso interno.\\nRegras: use só o que está nas respostas; não invente; português do Brasil direto; sem travessão; sem frase de abertura.\\nEstrutura: 1. Quem é e o que vende (3 linhas). 2. Números declarados (faturamento, ticket, audiência, investimento em tráfego hoje e pretendido). 3. O que mais importa para o trabalho de tráfego e de página. 4. Lacunas e contradições, cada uma como pergunta para fazer ao cliente. 5. Sinais de atenção.\", input: 'Cliente: ' + $('Acha o card').first().json.cliente + '\\n\\n' + $('Acha o card').first().json.texto }) }}",
+        "options": {}
+      },
+      "id": "08449e0f-329a-4771-8e2e-930fc8a2c74b",
+      "name": "OpenAI · resumo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1200,
+        64
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "plFleeSurouPUcje",
+          "name": "OpenAi Euforia"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Acha o card').first().json;\nconst rodape = 'Criada automaticamente quando o cliente preencheu o formulário de diagnóstico.' + (d.card_id ? `\\nCard no CRM: ${d.card_id}` : '');\nreturn [{ json: { cliente: d.cliente, trafego: !!d.trafego, pagina: !!d.pagina, rodape } }];"
+      },
+      "id": "f9ceed79-0400-4d9f-8bc1-4937fb70df36",
+      "name": "Monta tarefas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1008,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_onboarding_pagina_trafego($1, $2::boolean, $3::boolean, $4) as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.cliente, $json.trafego, $json.pagina, $json.rodape ] }}"
+        }
+      },
+      "id": "d65fc114-557b-422f-8dc1-7960bc8ca0e6",
+      "name": "Cria no gestão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -800,
+        64
+      ],
+      "notes": "Credencial: Postgres Gestão EuforIA (usuário gestao_n8n). Cria as tarefas e peças de Tráfego e Página no gestão; se a planilha repetir a linha, o banco pula o que já existe."
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $('OpenAI · resumo').first().json || {};\nlet t = r.output_text || '';\nif (!t && Array.isArray(r.output)) t = r.output.flatMap(o => (o.content || []).map(c => c.text || '')).join('\\n').trim();\nconst res = ($('Cria no gestão').first().json || {}).r || {};\nconst d = $('Acha o card').first().json;\n// Sempre devolve um item: sem tarefa de análise o comentário falha, mas o aviso no WhatsApp ainda segue.\nreturn [{ json: { task_id: res.analise_id || '', comment_text: ('RESUMO DA IA\\n\\n' + (t || '(a IA não respondeu; leia as respostas abaixo)') + '\\n\\n---\\n\\nRESPOSTAS DO FORMULÁRIO\\n\\n' + d.texto).slice(0, 95000) } }];"
+      },
+      "id": "3695cf14-85f4-477e-9891-9fde214491aa",
+      "name": "Comentário do resumo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        64
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_comentar(nullif($1, '')::uuid, $2, 'Resumo do formulário (IA)') as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+        }
+      },
+      "id": "e722aa5d-58c8-4395-96a6-38b46acfe24e",
+      "name": "Comenta no gestão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -400,
+        64
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Credencial: Postgres Gestão EuforIA. Em caso de erro segue em frente (o aviso e o pedido de acesso não podem parar por causa do comentário)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "a39c8548-8e39-4f23-9f83-a0ea360e2155",
+              "leftValue": "={{ $('Acha o card').first().json.trafego && !!$('Acha o card').first().json.tel }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f0e3ca98-08bc-47e0-a9a4-90c46fbee44a",
+      "name": "É tráfego?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.UAZAPI_URL + '/send/text' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Acha o card').first().json.tel, text: 'Oi, ' + $('Acha o card').first().json.primeiro + '! Recebi o seu formulário, obrigada.\\n\\nPróximo passo: preciso do acesso à sua conta de anúncios. No Gerenciador de Negócios da Meta, adicione o e-mail ' + $('Config').first().json.EMAIL_ACESSO_META + ' como pessoa, com acesso total à conta de anúncios. Se travar em algum passo, me chama que eu te ajudo.\\n\\nJunto, segue o nosso guia de criativos, com o que vamos precisar de você para os anúncios: ' + $('Config').first().json.GUIA_CRIATIVOS }) }}",
+        "options": {}
+      },
+      "id": "c5fb6800-cb34-4edc-aa88-f8ee229c8649",
+      "name": "Manda acesso e guia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16,
+        -144
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "agVcvHRIMmMN8wTJ",
+          "name": "UazAPI EuforIA"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.UAZAPI_URL + '/send/text' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $('Config').first().json.WPP_IZA, text: $('Acha o card').first().json.cliente + ' preencheu o formulário de diagnóstico. ' + (($('Cria no gestão').first().json.r || {}).total_criadas || 0) + ' tarefas criadas no gestão' + ($('Acha o card').first().json.trafego ? ', e o pedido de acesso com o guia dos criativos foi enviado.' : '.') }) }}",
+        "options": {}
+      },
+      "id": "57014beb-639a-4c42-8654-b2c144bdc278",
+      "name": "Avisa a Iza",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        64
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "agVcvHRIMmMN8wTJ",
+          "name": "UazAPI EuforIA"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Nova resposta do formulário": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Lê resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê resposta": {
+      "main": [
+        [
+          {
+            "node": "Busca card no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca card no CRM": {
+      "main": [
+        [
+          {
+            "node": "Acha o card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Acha o card": {
+      "main": [
+        [
+          {
+            "node": "Tráfego ou Página?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tráfego ou Página?": {
+      "main": [
+        [
+          {
+            "node": "OpenAI · resumo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisa: resposta sem card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI · resumo": {
+      "main": [
+        [
+          {
+            "node": "Monta tarefas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monta tarefas": {
+      "main": [
+        [
+          {
+            "node": "Cria no gestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comentário do resumo": {
+      "main": [
+        [
+          {
+            "node": "Comenta no gestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É tráfego?": {
+      "main": [
+        [
+          {
+            "node": "Manda acesso e guia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avisa a Iza",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manda acesso e guia": {
+      "main": [
+        [
+          {
+            "node": "Avisa a Iza",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cria no gestão": {
+      "main": [
+        [
+          {
+            "node": "Comentário do resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comenta no gestão": {
+      "main": [
+        [
+          {
+            "node": "É tráfego?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
