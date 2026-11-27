@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ddmm } from "@/lib/datas";
 import { pessoaAtual, supabaseServer } from "@/lib/supabase/server";
@@ -18,17 +19,21 @@ interface Reuniao {
 
 const campo = "h-9 rounded-lg border border-line bg-panel px-2.5 text-sm";
 
-export default async function PaginaReunioes() {
+export default async function PaginaReunioes({ searchParams }: { searchParams: Promise<{ tipo?: string }> }) {
+  const sp = await searchParams;
+  const tipo: "interna" | "arco" = sp.tipo === "arco" ? "arco" : "interna";
   const eu = await pessoaAtual();
   if (!eu) redirect("/login");
   if (eu.papel !== "admin") redirect("/hoje");
   const supabase = await supabaseServer();
 
   const [reuRes, itRes, pesRes] = await Promise.all([
-    supabase.from("reunioes").select("id,titulo,data,tipo,status,resumo,cliente:clientes(nome)").eq("status", "pendente").order("data", { ascending: false }).limit(30),
+    supabase.from("reunioes").select("id,titulo,data,tipo,status,resumo,cliente:clientes(nome)").eq("status", "pendente").eq("tipo", tipo).order("data", { ascending: false }).limit(30),
     supabase.from("reuniao_itens").select("id,reuniao_id,titulo,responsavel_id,responsavel_texto,prazo,destino,notas,status,ordem").eq("status", "proposta").order("ordem"),
     supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome"),
   ]);
+  const contRes = await supabase.from("reunioes").select("tipo").eq("status", "pendente");
+  const conta = (t: string) => ((contRes.data ?? []) as { tipo: string }[]).filter((x) => x.tipo === t).length;
   const reunioes = (reuRes.data ?? []) as unknown as Reuniao[];
   const itens = (itRes.data ?? []) as Item[];
   const pessoas = (pesRes.data ?? []) as { id: string; nome: string }[];
@@ -45,13 +50,22 @@ export default async function PaginaReunioes() {
       <p className="label">Tarefas que saíram das reuniões, esperando aprovação</p>
       <h1 className="mt-1.5 text-[30px] font-semibold leading-none tracking-tight">Reuniões</h1>
 
+      <div role="tablist" aria-label="Tipo de reunião" className="mt-5 inline-flex rounded-lg bg-panel2 p-1">
+        {([["interna", "Internas"], ["arco", "Arco"]] as const).map(([t, nome]) => (
+          <Link key={t} href={t === "interna" ? "/reunioes" : "/reunioes?tipo=arco"} role="tab" aria-selected={tipo === t}
+            className={`rounded-md px-3.5 py-1.5 text-sm font-medium ${tipo === t ? "bg-panel shadow-sm" : "text-muted"}`}>
+            {nome}{conta(t) > 0 ? ` (${conta(t)})` : ""}
+          </Link>
+        ))}
+      </div>
+
       {reuRes.error && (
         <p role="alert" className="mt-6 rounded-lg bg-dangerbg px-4 py-3 text-sm text-danger">
           Não consegui carregar as reuniões. Confira se o script 29 foi rodado no Supabase.
         </p>
       )}
       {!reuRes.error && reunioes.length === 0 && (
-        <p className="mt-6 text-sm text-muted">Nenhuma reunião esperando aprovação.</p>
+        <p className="mt-6 text-sm text-muted">{tipo === "arco" ? "Nenhuma reunião do Arco esperando aprovação." : "Nenhuma reunião interna esperando aprovação."}</p>
       )}
 
       <div className="mt-6 space-y-8">
