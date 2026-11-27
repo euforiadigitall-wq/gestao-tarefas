@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { dataBr, escreverCsv } from "@/lib/csv";
+import { filtroResponsavel } from "@/lib/responsavel";
 import { supabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,9 @@ export async function GET(req: NextRequest) {
     .limit(5000);
   const lanc = q.get("lanc");
   if (lanc && uuid.test(lanc)) consulta = consulta.contains("lancamento_ids", [lanc]);
-  for (const [param, coluna] of [["pessoa", "responsavel_id"], ["cliente", "cliente_id"], ["area", "area_id"]] as const) {
+  const pessoa = q.get("pessoa");
+  if (pessoa && uuid.test(pessoa)) consulta = consulta.or(filtroResponsavel(pessoa));
+  for (const [param, coluna] of [["cliente", "cliente_id"], ["area", "area_id"]] as const) {
     const v = q.get(param);
     if (v && uuid.test(v)) consulta = consulta.eq(coluna, v);
   }
