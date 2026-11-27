@@ -14,6 +14,7 @@ import { TarefaCard } from "@/components/TarefaCard";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
 } from "@/lib/datas";
+import { previaRecorrente, type RegraRecorrente } from "@/lib/recorrentes";
 import { etiquetasDeTarefas } from "@/lib/lancfiltro";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { corTag } from "@/lib/lancamentos";
@@ -231,6 +232,28 @@ export default async function Agenda({
   }
   for (const t of (simplesRes.data ?? []) as unknown as TarefaRow[]) {
     itens.push({ chave: `t-${t.id}`, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel), rotulo: null, futuro: false, data: t.prazo, horario: t.horario, movel: true, lancamentos: t.lancamentos });
+  }
+  // Prévia das recorrentes: o que ainda vai ser gerado nesse período (só admin enxerga as regras)
+  if (admin) {
+    const regrasRes = await supabase.from("recorrentes")
+      .select("id,titulo,cliente_id,area_id,responsavel_id,responsaveis_extras,lancamento_id,frequencia,dias_semana,intervalo_semanas,dia_mes,ultimo_dia_util,prazo_dias_uteis,horario,inicio,fim,ultima_geracao")
+      .eq("ativo", true);
+    const nomeDe = (id: string) => primeiro(pessoas.find((p) => p.id === id)?.nome ?? null);
+    for (const r of (regrasRes.data ?? []) as unknown as RegraRecorrente[]) {
+      const time = [r.responsavel_id, ...(r.responsaveis_extras ?? [])];
+      if (dono && !time.includes(dono)) continue;
+      if (cliente !== "todos" && r.cliente_id !== cliente) continue;
+      if (area !== "todas" && r.area_id !== area) continue;
+      if (lanc !== "todos" && r.lancamento_id !== lanc) continue;
+      for (const o of previaRecorrente(r, ini, fim, hoje)) {
+        // já existe a tarefa desse dia (nasceu do evento do Google ou já foi gerada): não repete
+        if (itens.some((i) => i.data === o.prazo && i.titulo.trim().toLowerCase() === r.titulo.trim().toLowerCase())) continue;
+        itens.push({
+          chave: `r-${r.id}-${o.prazo}`, titulo: r.titulo, cliente: null, area: null,
+          quem: time.map(nomeDe).filter(Boolean).join(", ") || null, rotulo: "recorrente", futuro: true, data: o.prazo, horario: r.horario,
+        });
+      }
+    }
   }
   const porDia = (d: string) => itens.filter((i) => i.data === d).sort((x, y) => (x.horario ?? "99:99").localeCompare(y.horario ?? "99:99"));
 
