@@ -9,6 +9,7 @@ import { Arrastavel, DiaAlvo } from "@/components/AgendaArrastar";
 import { ImportarExportar } from "@/components/ImportarExportar";
 import { MaisNoDia } from "@/components/MaisNoDia";
 import { NovaTarefa } from "@/components/NovaTarefa";
+import { TarefaCard } from "@/components/TarefaCard";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
 } from "@/lib/datas";
@@ -16,7 +17,7 @@ import { etiquetasDeTarefas } from "@/lib/lancfiltro";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { corTag } from "@/lib/lancamentos";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
-import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
+import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa, TarefaLink, TarefaView } from "@/lib/tipos";
 
 export const metadata: Metadata = { title: "Agenda" };
 export const dynamic = "force-dynamic";
@@ -85,11 +86,14 @@ function Movel({ i, children }: { i: Item; children: React.ReactNode }) {
   return i.movel && i.tarefaId && i.data ? <Arrastavel id={i.tarefaId} de={i.data}>{children}</Arrastavel> : <>{children}</>;
 }
 
-function CartaoItem({ i, tom, admin }: { i: Item; tom?: "atrasada"; admin?: boolean }) {
+function CartaoItem({ i, tom, admin, abrir }: { i: Item; tom?: "atrasada"; admin?: boolean; abrir?: string }) {
   return (
     <article className={`panel relative overflow-hidden py-2.5 pl-3.5 pr-3 ${i.futuro ? "opacity-90 border-dashed" : ""}`}>
       <span className={`absolute inset-y-0 left-0 w-1 ${tom === "atrasada" ? "bg-[var(--danger)]" : i.futuro ? "bg-[var(--line)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
-      <h3 className="text-[13px] font-medium leading-snug">{i.horario && <span className="mono mr-1.5 text-tx2">{i.horario.slice(0, 5)}</span>}{i.titulo}</h3>
+      <h3 className="text-[13px] font-medium leading-snug">
+        {i.horario && <span className="mono mr-1.5 text-tx2">{i.horario.slice(0, 5)}</span>}
+        {abrir ? <Link href={abrir} draggable={false} className="after:absolute after:inset-0 hover:underline">{i.titulo}</Link> : i.titulo}
+      </h3>
       {i.lancamentos && i.lancamentos.length > 0 && <p className="mt-1 flex flex-wrap gap-1"><Etiquetas itens={i.lancamentos} /></p>}
       <p className="mt-0.5 text-xs text-tx2">
         {i.cliente ?? "Interna"}
@@ -102,19 +106,21 @@ function CartaoItem({ i, tom, admin }: { i: Item; tom?: "atrasada"; admin?: bool
           {i.quem && <span>{i.rotulo ? "· " : ""}{i.quem}</span>}
         </p>
       )}
-      {admin && i.tarefaId && <div className="mt-2"><AcoesTarefa id={i.tarefaId} admin titulo={i.titulo} /></div>}
+      {admin && i.tarefaId && <div className="relative z-[2] mt-2"><AcoesTarefa id={i.tarefaId} admin titulo={i.titulo} /></div>}
     </article>
   );
 }
 
-function Mini({ i }: { i: Item }) {
-  const dica = [i.titulo, i.cliente ?? "Interna", i.rotulo, i.quem].filter(Boolean).join(" · ");
+function Mini({ i, abrir }: { i: Item; abrir?: string }) {
+  const dica = [i.horario ? i.horario.slice(0, 5) : null, i.titulo, i.cliente ?? "Interna", i.rotulo, i.quem].filter(Boolean).join(" · ");
   return (
     <div title={dica} className={`relative truncate rounded-md bg-panel py-1 pl-2.5 pr-1.5 text-[11px] leading-tight ring-1 ring-[var(--line)] ${i.futuro ? "text-tx3" : "text-tx"}`}>
       <span className={`absolute inset-y-0 left-0 w-[3px] rounded-l-md ${i.futuro ? "bg-[var(--line-strong)]" : "bg-[var(--info)]"}`} aria-hidden="true" />
+      {abrir && <Link href={abrir} draggable={false} scroll aria-label={`Abrir ${i.titulo}`} className="absolute inset-0 z-[1] rounded-md hover:ring-1 hover:ring-[var(--line-strong)]" />}
       {i.lancamentos && i.lancamentos.length > 0 && (
         <span className="mono mr-1 font-medium" style={{ color: `var(--tag-${corTag(i.lancamentos[0].cor)})` }}>{i.lancamentos.map((e) => e.codigo).join("+")}</span>
       )}
+      {i.horario && <span className="mono mr-1 text-tx2">{i.horario.slice(0, 5)}</span>}
       {i.titulo}
     </div>
   );
@@ -122,7 +128,7 @@ function Mini({ i }: { i: Item }) {
 
 export default async function Agenda({
   searchParams,
-}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string; lanc?: string }> }) {
+}: { searchParams: Promise<{ visao?: string; data?: string; pessoa?: string; cliente?: string; area?: string; nova?: string; lanc?: string; tarefa?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
@@ -149,6 +155,16 @@ export default async function Agenda({
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
   const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
   const nova = ehData(sp.nova) ? sp.nova : null;
+  const tarefaId = sp.tarefa && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sp.tarefa) ? sp.tarefa : null;
+  const abertaRes = tarefaId
+    ? await supabase.from("v_tarefas")
+        .select("id,titulo,cliente_id,cliente,area,responsavel_id,responsavel,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,atrasada,bloco,notas,lancamentos,etapas_total,horario,co_responsavel_ids,co_responsaveis")
+        .eq("id", tarefaId).is("arquivada_em", null).maybeSingle()
+    : null;
+  const aberta = (abertaRes?.data ?? null) as unknown as TarefaView | null;
+  const linksAbertos = aberta
+    ? (((await supabase.from("links").select("id,tarefa_id,titulo,url").eq("tarefa_id", aberta.id).order("criado_em")).data ?? []) as TarefaLink[])
+    : [];
   const dono = admin ? (pessoa !== "todas" ? pessoa : null) : meuId;
 
   // Intervalo que a visão precisa
@@ -218,7 +234,7 @@ export default async function Agenda({
   const porDia = (d: string) => itens.filter((i) => i.data === d).sort((x, y) => (x.horario ?? "99:99").localeCompare(y.horario ?? "99:99"));
 
   // Endereços que mantêm filtros e visão
-  const href = (novo: { visao?: Visao; data?: string; nova?: string }) => {
+  const href = (novo: { visao?: Visao; data?: string; nova?: string; tarefa?: string }) => {
     const p = new URLSearchParams();
     const v = novo.visao ?? visao;
     const d = novo.data ?? data;
@@ -229,6 +245,7 @@ export default async function Agenda({
     if (area !== "todas") p.set("area", area);
     if (lanc !== "todos") p.set("lanc", lanc);
     if (novo.nova) p.set("nova", novo.nova);
+    if (novo.tarefa) p.set("tarefa", novo.tarefa);
     const s = p.toString();
     return s ? `/agenda?${s}` : "/agenda";
   };
@@ -242,6 +259,7 @@ export default async function Agenda({
   if (visao !== "mes") fixos.visao = visao;
   if (data !== hoje) fixos.data = data;
   const exportFiltros = [dono ? `pessoa=${dono}` : "", cliente !== "todos" ? `cliente=${cliente}` : "", area !== "todas" ? `area=${area}` : "", lanc !== "todos" ? `lanc=${lanc}` : ""].filter(Boolean).join("&");
+  const abrir = (i: Item) => (i.tarefaId ? href({ tarefa: i.tarefaId }) : undefined);
   const erro = etapasRes.error || simplesRes.error || atrasadasRes.error;
 
   const semanasMes = visao === "mes" ? Math.round((new Date(fim).getTime() - new Date(ini).getTime()) / 86400000 + 1) / 7 : 0;
@@ -279,6 +297,21 @@ export default async function Agenda({
         <ImportarExportar admin={admin} filtros={exportFiltros} lancamentoId={lanc !== "todos" ? lanc : undefined} />
       </div>
 
+      {aberta && (
+        <section className="mt-6" aria-label="Tarefa aberta">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="label">Tarefa aberta</span>
+            <Link href={href({})} className="btn btn-ghost !h-8">Fechar</Link>
+          </div>
+          <TarefaCard key={aberta.id} t={aberta} hoje={hoje} admin={admin} pessoas={pessoas} links={linksAbertos} abrirDetalhes />
+        </section>
+      )}
+      {tarefaId && !aberta && (
+        <p role="status" className="mt-6 rounded-lg bg-panel2 px-4 py-3 text-sm text-tx2">
+          Não achei essa tarefa. Ela pode ter sido arquivada ou você não tem acesso. <Link className="underline" href={href({})}>Fechar</Link>
+        </p>
+      )}
+
       {nova && (
         <div>
           <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
@@ -306,7 +339,7 @@ export default async function Agenda({
                 chave: t.id, tarefaId: t.id, titulo: t.titulo, cliente: t.cliente, area: t.area, quem: primeiro(t.responsavel),
                 rotulo: t.etapa_atual !== null ? t.proxima_acao : null, futuro: false, data: t.prazo_vez, movel: t.etapa_atual === null, lancamentos: t.lancamentos,
               };
-              return <Movel key={t.id} i={i}><CartaoItem tom="atrasada" admin={admin} i={i} /></Movel>;
+              return <Movel key={t.id} i={i}><CartaoItem tom="atrasada" admin={admin} i={i} abrir={abrir(i)} /></Movel>;
             })()
             ))}
           </div>
@@ -361,10 +394,10 @@ export default async function Agenda({
                       <Plus size={14} />
                     </Link>
                     <div className="space-y-1">
-                      {doDia.slice(0, 3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} /></Movel>)}
+                      {doDia.slice(0, 3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} abrir={abrir(i)} /></Movel>)}
                       {doDia.length > 3 && (
                         <MaisNoDia total={doDia.length - 3} rotulo={ddmm(d)}>
-                          {doDia.slice(3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} /></Movel>)}
+                          {doDia.slice(3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} abrir={abrir(i)} /></Movel>)}
                         </MaisNoDia>
                       )}
                     </div>
@@ -391,7 +424,7 @@ export default async function Agenda({
                   </span>
                 </h2>
                 <div className="space-y-2">
-                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <Movel key={i.chave} i={i}><CartaoItem i={i} admin={admin} /></Movel>)}
+                  {doDia.length === 0 ? <p className="px-0.5 text-xs text-tx3">Nada neste dia</p> : doDia.map((i) => <Movel key={i.chave} i={i}><CartaoItem i={i} admin={admin} abrir={abrir(i)} /></Movel>)}
                 </div>
               </DiaAlvo>
             );
@@ -405,7 +438,7 @@ export default async function Agenda({
             <span className="h-px flex-1 bg-[var(--line)]" />
           </h2>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {diasSemana.slice(5).flatMap((d) => porDia(d)).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
+            {diasSemana.slice(5).flatMap((d) => porDia(d)).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} abrir={abrir(i)} />)}
           </div>
         </section>
       )}
@@ -422,7 +455,7 @@ export default async function Agenda({
             </div>
           ) : (
             <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-              {porDia(data).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} />)}
+              {porDia(data).map((i) => <CartaoItem key={i.chave} i={i} admin={admin} abrir={abrir(i)} />)}
             </div>
           )}
         </section>

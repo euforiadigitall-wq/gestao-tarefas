@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import { CardQuadro } from "@/components/CardQuadro";
 import { Etiqueta } from "@/components/Etiqueta";
-import { descreverPrazo, hojeSP } from "@/lib/datas";
+import { comHora, descreverPrazo, hojeSP } from "@/lib/datas";
 import { pessoaAtual, supabaseServer } from "@/lib/supabase/server";
 import type { EtiquetaLanc } from "@/lib/tipos";
 import { corPrazo, trilhoPrazo } from "@/lib/visual";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface Linha {
   id: string; titulo: string; cliente: string | null; area: string | null; responsavel: string | null; bloco: string | null;
-  status: string; etapa_atual: number | null; estado_atual: string; proxima_acao: string | null; prazo: string | null; prazo_vez: string | null;
+  status: string; etapa_atual: number | null; estado_atual: string; proxima_acao: string | null; prazo: string | null; prazo_vez: string | null; horario: string | null;
   lancamentos: EtiquetaLanc[] | null; etapas_total: number;
 }
 
@@ -38,7 +38,7 @@ export default async function Busca({ searchParams }: { searchParams: Promise<{ 
     const padrao = `%${termo}%`;
     const [tRes, lRes, cRes] = await Promise.all([
       supabase.from("v_tarefas")
-        .select("id,titulo,cliente,area,responsavel,bloco,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,lancamentos,etapas_total")
+        .select("id,titulo,cliente,area,responsavel,bloco,status,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,horario,lancamentos,etapas_total")
         .is("arquivada_em", null)
         .or(`titulo.ilike.${padrao},cliente.ilike.${padrao},bloco.ilike.${padrao},notas.ilike.${padrao},responsavel.ilike.${padrao}`)
         .order("prazo_vez", { ascending: true, nullsFirst: false })
@@ -101,7 +101,7 @@ export default async function Busca({ searchParams }: { searchParams: Promise<{ 
                   linha: `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`,
                   estado: t.etapa_atual !== null ? t.estado_atual : null,
                   proxima: !feita && t.proxima_acao ? t.proxima_acao : null,
-                  prazoTexto: feita ? "Concluída" : prazo.texto, prazoClasse: feita ? "bg-panel2 text-tx2" : corPrazo[prazo.tom], trilho: feita ? "bg-[var(--line-strong)]" : trilhoPrazo[prazo.tom],
+                  prazoTexto: feita ? "Concluída" : comHora(prazo.texto, t.horario), prazoClasse: feita ? "bg-panel2 text-tx2" : corPrazo[prazo.tom], trilho: feita ? "bg-[var(--line-strong)]" : trilhoPrazo[prazo.tom],
                   etapa: t.etapa_atual, total: t.etapas_total, quem: t.responsavel,
                 }} />
               );

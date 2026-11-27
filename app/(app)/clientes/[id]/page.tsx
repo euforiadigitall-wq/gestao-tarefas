@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download } from "lucide-react";
 import { Etiqueta, Etiquetas } from "@/components/Etiqueta";
-import { descreverPrazo, hojeSP } from "@/lib/datas";
+import { comHora, descreverPrazo, hojeSP } from "@/lib/datas";
 import { supabaseServer } from "@/lib/supabase/server";
 import { PAPEIS_CLIENTE, type EtiquetaLanc } from "@/lib/tipos";
 import { corPrazo } from "@/lib/visual";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface Linha {
   id: string; titulo: string; area: string | null; responsavel: string | null; proxima_acao: string | null; etapa_atual: number | null;
-  prazo: string | null; prazo_vez: string | null; lancamentos: EtiquetaLanc[] | null;
+  prazo: string | null; prazo_vez: string | null; horario: string | null; lancamentos: EtiquetaLanc[] | null;
 }
 
 export default async function PaginaCliente({ params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +24,7 @@ export default async function PaginaCliente({ params }: { params: Promise<{ id: 
 
   const [cliRes, tarRes, concRes, lanRes, papRes] = await Promise.all([
     supabase.from("clientes").select("id,nome").eq("id", id).maybeSingle(),
-    supabase.from("v_tarefas").select("id,titulo,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez,lancamentos")
+    supabase.from("v_tarefas").select("id,titulo,area,responsavel,proxima_acao,etapa_atual,prazo,prazo_vez,horario,lancamentos")
       .eq("cliente_id", id).neq("status", "concluida").is("arquivada_em", null).order("prazo_vez", { ascending: true, nullsFirst: false }).limit(500),
     supabase.from("v_tarefas").select("id", { count: "exact", head: true }).eq("cliente_id", id).eq("status", "concluida"),
     supabase.from("lancamentos").select("id,codigo,cor,nome,status").eq("cliente_id", id).order("data_abertura", { ascending: false, nullsFirst: false }),
@@ -108,7 +108,7 @@ export default async function PaginaCliente({ params }: { params: Promise<{ id: 
                           {t.etapa_atual !== null && t.proxima_acao && <> · próxima ação: <b className="font-medium text-tx">{t.proxima_acao}</b></>}
                         </p>
                       </div>
-                      <span className={`chip ${corPrazo[prazo.tom]}`}>{prazo.texto}</span>
+                      <span className={`chip ${corPrazo[prazo.tom]}`}>{comHora(prazo.texto, t.horario)}</span>
                     </li>
                   );
                 })}

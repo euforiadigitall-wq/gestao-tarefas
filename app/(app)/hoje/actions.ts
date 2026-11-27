@@ -58,18 +58,31 @@ export async function salvarDescricao(id: string, texto: string): Promise<Result
 }
 
 // Muda o dia da tarefa simples (ou tira o prazo). Quem pode é o banco que decide: responsáveis e admin.
-export async function mudarPrazo(id: string, prazo: string): Promise<Resultado> {
+export async function mudarPrazo(id: string, prazo: string, horario = ""): Promise<Resultado> {
   if (prazo && !/^\d{4}-\d{2}-\d{2}$/.test(prazo)) return { erro: "Prazo inválido." };
+  if (horario && !/^([01]\d|2[0-3]):[0-5]\d$/.test(horario)) return { erro: "Hora inválida." };
   const supabase = await supabaseServer();
   const { data, error } = await supabase
     .from("tarefas")
-    .update({ prazo: prazo || null, ...(prazo ? {} : { horario: null }) })
+    .update({ prazo: prazo || null, horario: prazo && horario ? horario : null })
     .eq("id", id)
     .is("etapa_atual", null)
     .neq("status", "concluida")
     .select("id");
   if (error) return { erro: traduzir(error.message) };
   if (!data || data.length === 0) return { erro: "Não foi possível mudar o prazo. Só quem é responsável, ou um admin, muda, e a tarefa não pode estar concluída nem ter esteira." };
+  revalidarTudo();
+  return {};
+}
+
+export async function mudarTitulo(id: string, titulo: string): Promise<Resultado> {
+  const limpo = titulo.replace(/\s+/g, " ").trim();
+  if (!limpo) return { erro: "O título não pode ficar vazio." };
+  if (limpo.length > 200) return { erro: "Título longo demais. Use até 200 caracteres." };
+  const supabase = await supabaseServer();
+  const { data, error } = await supabase.from("tarefas").update({ titulo: limpo }).eq("id", id).neq("status", "concluida").select("id");
+  if (error) return { erro: traduzir(error.message) };
+  if (!data || data.length === 0) return { erro: "Não foi possível mudar o título. Só quem é responsável, ou um admin, muda, e a tarefa não pode estar concluída." };
   revalidarTudo();
   return {};
 }

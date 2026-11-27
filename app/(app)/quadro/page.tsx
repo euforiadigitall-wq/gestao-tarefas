@@ -3,7 +3,7 @@ import { CardQuadro } from "@/components/CardQuadro";
 import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import Link from "next/link";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
-import { descreverPrazo, hojeSP } from "@/lib/datas";
+import { comHora, descreverPrazo, hojeSP } from "@/lib/datas";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
 import type { Area, EtiquetaLanc, LancamentoOpcao, Opcao, Pessoa } from "@/lib/tipos";
@@ -26,6 +26,7 @@ interface Linha {
   proxima_acao: string | null;
   prazo: string | null;
   prazo_vez: string | null;
+  horario: string | null;
   bloco: string | null;
   lancamentos: EtiquetaLanc[] | null;
   etapas_total: number;
@@ -74,7 +75,7 @@ export default async function Quadro({
 
   let q = supabase
     .from("v_tarefas")
-    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,bloco,lancamentos,etapas_total")
+    .select("id,titulo,cliente_id,cliente,area,area_id,responsavel_id,responsavel,etapa_atual,estado_atual,proxima_acao,prazo,prazo_vez,horario,bloco,lancamentos,etapas_total")
     .neq("status", "concluida")
     .is("arquivada_em", null)
     .order("prazo_vez", { ascending: true, nullsFirst: false })
@@ -156,7 +157,7 @@ export default async function Quadro({
                 <LinhaLista key={t.id} d={{
                   chave: t.id, titulo: t.titulo, sub: `${t.cliente ?? "Interna"}${t.area ? ` · ${t.area}` : ""}`, lancamentos: t.lancamentos,
                   etapa: t.etapa_atual, total: t.etapas_total, acao: t.proxima_acao, quem: t.responsavel,
-                  prazoTexto: prazo.texto, prazoClasse: corPrazo[prazo.tom],
+                  prazoTexto: comHora(prazo.texto, t.horario), prazoClasse: corPrazo[prazo.tom],
                 }} />
               );
             })}
@@ -181,7 +182,7 @@ export default async function Quadro({
                         linha: agrupar === "pessoa" ? (t.cliente ?? "Interna") : agrupar === "cliente" ? (t.responsavel ?? "Sem responsável") : `${t.cliente ?? "Interna"} · ${t.responsavel ?? "Sem responsável"}`,
                         estado: t.etapa_atual !== null ? t.estado_atual : null,
                         proxima: t.proxima_acao && agrupar !== "etapa" ? t.proxima_acao : null,
-                        prazoTexto: prazo.texto, prazoClasse: corPrazo[prazo.tom], trilho: trilhoPrazo[prazo.tom],
+                        prazoTexto: comHora(prazo.texto, t.horario), prazoClasse: corPrazo[prazo.tom], trilho: trilhoPrazo[prazo.tom],
                         etapa: t.etapa_atual, total: t.etapas_total, quem: t.responsavel,
                       }} />
                     );

@@ -94,3 +94,6 @@ export function somarMeses(d: string, n: number): string {
   const [y, m] = d.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 10);
 }
+
+// Tarefa com hora mostra a hora junto do prazo: "Hoje · 14:30".
+export const comHora = (texto: string, horario?: string | null): string => (horario ? `${texto} · ${horario.slice(0, 5)}` : texto);

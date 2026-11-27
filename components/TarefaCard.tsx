@@ -3,7 +3,7 @@
 import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, mudarPrazo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, mudarPrazo, mudarTitulo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
 import { Comentarios } from "@/components/Comentarios";
 import { Esteira } from "@/components/Esteira";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
@@ -25,15 +25,17 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [] }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[] }) {
+export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], abrirDetalhes = false }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[]; abrirDetalhes?: boolean }) {
   const [pendente, iniciar] = useTransition();
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [erro, setErro] = useState("");
-  const [detalhes, setDetalhes] = useState(false);
+  const [detalhes, setDetalhes] = useState(abrirDetalhes);
   const [desc, setDesc] = useState(t.notas ?? "");
   const [salvo, setSalvo] = useState(true);
   const [novoPrazo, setNovoPrazo] = useState(t.prazo ?? "");
+  const [novaHora, setNovaHora] = useState((t.horario ?? "").slice(0, 5));
+  const [novoTitulo, setNovoTitulo] = useState(t.titulo);
   const [coIds, setCoIds] = useState<string[]>(t.co_responsavel_ids ?? []);
   const [coSalvo, setCoSalvo] = useState(true);
   const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
@@ -119,16 +121,26 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [] }:
       {detalhes && (
         <div className="mt-3 space-y-4 border-t border-[var(--line)] pt-3">
           <div>
+            <label htmlFor={`ti-${t.id}`} className="label mb-1.5 block">Título</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <input id={`ti-${t.id}`} className="field !w-full sm:!w-auto sm:min-w-[320px] sm:flex-1" maxLength={200} value={novoTitulo} onChange={(e) => setNovoTitulo(e.target.value)} />
+              <button type="button" className="btn" disabled={pendente || !novoTitulo.trim() || novoTitulo.trim() === t.titulo} onClick={() => rodar(() => mudarTitulo(t.id, novoTitulo))}>
+                Salvar título
+              </button>
+            </div>
+          </div>
+          <div>
             <label htmlFor={`p-${t.id}`} className="label mb-1.5 block">Prazo</label>
             {esteira ? (
               <p className="text-[13px] text-tx2">O prazo desta peça segue o tempo de cada etapa e se ajusta sozinho.</p>
             ) : (
               <div className="flex flex-wrap items-center gap-2">
                 <input id={`p-${t.id}`} type="date" className="field !w-auto" value={novoPrazo} onChange={(e) => setNovoPrazo(e.target.value)} />
-                <button type="button" className="btn" disabled={pendente || novoPrazo === (t.prazo ?? "")} onClick={() => rodar(() => mudarPrazo(t.id, novoPrazo))}>
+                <input aria-label="Hora (opcional)" type="time" className="field !w-auto" value={novaHora} disabled={!novoPrazo} onChange={(e) => setNovaHora(e.target.value)} />
+                <button type="button" className="btn" disabled={pendente || (novoPrazo === (t.prazo ?? "") && novaHora === (t.horario ?? "").slice(0, 5))} onClick={() => rodar(() => mudarPrazo(t.id, novoPrazo, novaHora))}>
                   Salvar prazo
                 </button>
-                {t.prazo && <button type="button" className="btn btn-ghost" disabled={pendente} onClick={() => { setNovoPrazo(""); rodar(() => mudarPrazo(t.id, "")); }}>Tirar prazo</button>}
+                {t.prazo && <button type="button" className="btn btn-ghost" disabled={pendente} onClick={() => { setNovoPrazo(""); setNovaHora(""); rodar(() => mudarPrazo(t.id, "")); }}>Tirar prazo</button>}
               </div>
             )}
           </div>
