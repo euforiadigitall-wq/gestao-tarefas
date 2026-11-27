@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, BookOpen, Search, CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
+import { BarChart3, BookOpen, ClipboardCheck, Search, CalendarRange, History, KanbanSquare, Repeat, Rocket, ShieldCheck, Sun, UserRound, Users } from "lucide-react";
 import { BuscaTopo } from "@/components/BuscaTopo";
 import { Logo } from "@/components/Logo";
 import { NavLink } from "@/components/NavLink";
@@ -46,6 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <NavLink href="/clientes"><Users size={17} /> Clientes</NavLink>
           {pessoa.papel === "admin" && <NavLink href="/metricas"><BarChart3 size={17} /> Métricas</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/base-arco"><BookOpen size={17} /> Base Arco</NavLink>}
+          {pessoa.papel === "admin" && <NavLink href="/reunioes"><ClipboardCheck size={17} /> Reuniões</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/recorrentes"><Repeat size={17} /> Recorrentes</NavLink>}
           {pessoa.papel === "admin" && <NavLink href="/admin"><ShieldCheck size={17} /> Admin</NavLink>}
           <NavLink href="/conta"><UserRound size={17} /> Minha conta</NavLink>
