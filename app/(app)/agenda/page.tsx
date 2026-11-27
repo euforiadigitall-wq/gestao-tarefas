@@ -284,7 +284,10 @@ export default async function Agenda({
   if (data !== hoje) fixos.data = data;
   const exportFiltros = [dono ? `pessoa=${dono}` : "", cliente !== "todos" ? `cliente=${cliente}` : "", area !== "todas" ? `area=${area}` : "", lanc !== "todos" ? `lanc=${lanc}` : ""].filter(Boolean).join("&");
   const abrir = (i: Item) => (i.tarefaId ? href({ tarefa: i.tarefaId }) : undefined);
-  const erro = etapasRes.error || simplesRes.error || atrasadasRes.error;
+  // Aviso na tela removido a pedido da Iza; o erro real fica no log do servidor (Vercel)
+  for (const [n, r] of [["etapas", etapasRes], ["simples", simplesRes], ["atrasadas", atrasadasRes]] as const) {
+    if (r.error) console.error(`[agenda] consulta ${n}:`, r.error.message);
+  }
 
   const semanasMes = visao === "mes" ? Math.round((new Date(fim).getTime() - new Date(ini).getTime()) / 86400000 + 1) / 7 : 0;
   const diasGrade = visao === "mes" ? Array.from({ length: semanasMes * 7 }, (_, n) => somarDias(ini, n)) : [];
@@ -337,12 +340,6 @@ export default async function Agenda({
           <NovaTarefa key={nova} admin={admin} meuId={meuId} clientes={clientes} areas={areas} pessoas={pessoas}
             modelos={[]} papeisCliente={[]} lancamentos={lancs} prazoInicial={nova} fecharHref={href({})} />
         </div>
-      )}
-
-      {erro && (
-        <p role="alert" className="mt-6 rounded-lg bg-dangerbg px-4 py-3 text-sm text-danger">
-          Não consegui carregar a agenda agora. Atualize a página; se continuar, avise a Iza.
-        </p>
       )}
 
       {atrasadasRows.length > 0 && (
