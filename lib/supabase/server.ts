@@ -26,7 +26,13 @@ export const supabaseServer = cache(async () => {
 });
 
 // Quem está logado e a ficha dessa pessoa, buscados uma única vez por requisição.
-export const usuarioAtual = cache(async () => (await supabaseServer()).auth.getUser());
+// Lê quem é pelo token (getClaims), sem ir ao servidor de login a cada tela. O proxy.ts continua conferindo
+// o login no servidor em toda requisição, e o banco confere o token de novo em cada consulta (RLS).
+export const usuarioAtual = cache(async () => {
+  const { data } = await (await supabaseServer()).auth.getClaims();
+  const sub = data?.claims?.sub;
+  return { data: { user: sub ? { id: sub } : null } };
+});
 
 export const pessoaAtual = cache(async (): Promise<Pessoa | null> => {
   const { data: auth } = await usuarioAtual();
