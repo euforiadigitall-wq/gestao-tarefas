@@ -121,18 +121,51 @@ begin
   end if;
 end $$;
 
--- As 4 recorrentes semanais que ja tem evento de mesmo nome no Google Agenda (nao duplica se rodar de novo)
-insert into gestao.recorrentes (titulo, responsavel_id, responsaveis_extras, frequencia, dias_semana, intervalo_semanas, prazo_dias_uteis, horario, inicio, criado_por)
-select v.titulo, iza.id,
-       array(select p.id from gestao.pessoas p where p.apelido = any (v.extras)),
-       'semanal', array[v.dia], 1, 0, v.hora::time, date '2026-11-30', iza.id
-from (values
-  ('[GT] Weekly', array['Jony'], 1, '09:00'),
-  ('[Copy] Weekly', array['Isa'], 1, '10:00'),
-  ('[CS] Alinhamento Bia', array['Isa'], 4, '10:00'),
-  ('[EuforIA] Projeto Virgínia', array['Bia'], 4, '11:00')
-) as v(titulo, extras, dia, hora)
-cross join (select id from gestao.pessoas where apelido = 'Iza' limit 1) iza
-where not exists (select 1 from gestao.recorrentes r where lower(r.titulo) = lower(v.titulo));
+-- As 4 recorrentes semanais que ja tem evento de mesmo nome no Google Agenda.
+-- Pode rodar de novo: se a regra existe, acerta os responsaveis; se nao, cria.
+-- Primeiro nome da lista = quem fica como responsavel principal; os demais viram co-responsaveis.
+create or replace function pg_temp.pessoa(p_nome text) returns uuid language sql stable as $$
+  select id from gestao.pessoas
+  where lower(apelido) = lower(p_nome) or lower(split_part(nome, ' ', 1)) = lower(p_nome)
+  order by (lower(apelido) = lower(p_nome)) desc limit 1
+$$;
+
+do $$
+declare
+  v record;
+  v_resp uuid;
+  v_extras uuid[];
+  v_iza uuid := pg_temp.pessoa('Iza');
+begin
+  for v in select * from (values
+    ('[GT] Weekly',               array['Iza','Isa','Bia','Jony'],                          1, '09:00'),
+    ('[Copy] Weekly',             array['Isa','Raphael'],                                   1, '10:00'),
+    ('[CS] Alinhamento Bia',      array['Isa','Bia'],                                       4, '10:00'),
+    ('[EuforIA] Projeto Virgínia', array['Isa','Iza','Raphael','Jony','Bia','Rafael'],      4, '11:00')
+  ) as t(titulo, quem, dia, hora) loop
+    v_resp := pg_temp.pessoa(v.quem[1]);
+    select coalesce(array_agg(x), '{}') into v_extras
+    from (select pg_temp.pessoa(q) as x from unnest(v.quem[2:]) q) e where x is not null;
+    if v_resp is null then raise exception 'nao achei a pessoa %', v.quem[1]; end if;
+    if exists (select 1 from gestao.recorrentes r where lower(r.titulo) = lower(v.titulo)) then
+      update gestao.recorrentes set responsavel_id = v_resp, responsaveis_extras = v_extras,
+             dias_semana = array[v.dia], horario = v.hora::time, prazo_dias_uteis = 0, ativo = true
+      where lower(titulo) = lower(v.titulo);
+    else
+      insert into gestao.recorrentes (titulo, responsavel_id, responsaveis_extras, frequencia, dias_semana, intervalo_semanas, prazo_dias_uteis, horario, inicio, criado_por)
+      values (v.titulo, v_resp, v_extras, 'semanal', array[v.dia], 1, 0, v.hora::time, date '2026-11-30', v_iza);
+    end if;
+  end loop;
+end $$;
+
+-- Apaga a "[GT] Weekly" avulsa da Iza (30/11) que veio da importacao; a do Jony, ligada ao evento do Google, fica.
+delete from gestao.tarefas
+where lower(titulo) = '[gt] weekly' and prazo = date '2026-11-30'
+  and responsavel_id = pg_temp.pessoa('Iza') and agenda_evento_id is null and recorrente_id is null
+  and exists (select 1 from gestao.tarefas o where lower(o.titulo) = '[gt] weekly' and o.prazo = date '2026-11-30' and o.id <> tarefas.id);
+
+select r.titulo, p.apelido as principal, cardinality(r.responsaveis_extras) as extras, r.dias_semana, r.horario
+from gestao.recorrentes r join gestao.pessoas p on p.id = r.responsavel_id
+where lower(r.titulo) in ('[gt] weekly', '[copy] weekly', '[cs] alinhamento bia', '[euforia] projeto virgínia') order by r.titulo;
 
 select count(*) as recorrentes, count(*) filter (where cardinality(responsaveis_extras) > 0) as com_mais_de_um from gestao.recorrentes;
