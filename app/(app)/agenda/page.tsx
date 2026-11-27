@@ -7,6 +7,7 @@ import { AcoesTarefa } from "@/components/AcoesTarefa";
 import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import { Arrastavel, DiaAlvo } from "@/components/AgendaArrastar";
 import { ImportarExportar } from "@/components/ImportarExportar";
+import { MaisNoDia } from "@/components/MaisNoDia";
 import { NovaTarefa } from "@/components/NovaTarefa";
 import {
   dataExtensa, ddmm, diaDoMes, diaSemanaLongo, domingoDe, ehData, fimMes, hojeSP, inicioMes, rotuloMes, segundaDe, somarDias, somarMeses,
@@ -362,7 +363,9 @@ export default async function Agenda({
                     <div className="space-y-1">
                       {doDia.slice(0, 3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} /></Movel>)}
                       {doDia.length > 3 && (
-                        <Link href={href({ visao: "dia", data: d })} className="block px-1 text-[11px] text-tx2 hover:underline">+{doDia.length - 3} mais</Link>
+                        <MaisNoDia total={doDia.length - 3} rotulo={ddmm(d)}>
+                          {doDia.slice(3).map((i) => <Movel key={i.chave} i={i}><Mini i={i} /></Movel>)}
+                        </MaisNoDia>
                       )}
                     </div>
                   </DiaAlvo>
