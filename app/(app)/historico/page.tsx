@@ -4,7 +4,8 @@ import { FiltrosHistorico } from "@/components/FiltrosHistorico";
 import { dataHoraSP, dias, diaSP } from "@/lib/datas";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
-import type { Opcao, Pessoa } from "@/lib/tipos";
+import type { Area, Opcao, Pessoa } from "@/lib/tipos";
+import { Download } from "lucide-react";
 import { TituloTarefa } from "@/components/TituloTarefa";
 
 export const metadata: Metadata = { title: "Histórico" };
@@ -34,7 +35,7 @@ function situacaoPrazo(prazo: string | null, concluidaEm: string): { texto: stri
 
 export default async function Historico({
   searchParams,
-}: { searchParams: Promise<{ pessoa?: string; periodo?: string; q?: string }> }) {
+}: { searchParams: Promise<{ pessoa?: string; periodo?: string; q?: string; cliente?: string; area?: string }> }) {
   const supabase = await supabaseServer();
   const { data: auth } = await usuarioAtual();
   const meuId = auth.user!.id;
@@ -44,16 +45,31 @@ export default async function Historico({
 
   const { data: pessoasLista } = await supabase.from("pessoas").select("id,nome").order("nome");
   const pessoas = (pessoasLista ?? []) as Opcao[];
+  const [clientesRes, areasRes] = await Promise.all([
+    supabase.from("clientes").select("id,nome").eq("ativo", true).order("nome"),
+    supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),
+  ]);
+  const clientes = (clientesRes.data ?? []) as Opcao[];
+  const areas = (areasRes.data ?? []) as Area[];
   const nomes = new Map(pessoas.map((p) => [p.id, p.nome]));
 
   const sp = await searchParams;
   const periodo = ["7", "30", "90", "todos"].includes(sp.periodo ?? "") ? (sp.periodo as string) : "30";
   const pessoa = admin && sp.pessoa && pessoas.some((p) => p.id === sp.pessoa) ? sp.pessoa : "todas";
   const q = (sp.q ?? "").trim().slice(0, 80);
+  const cliente = sp.cliente && clientes.some((c) => c.id === sp.cliente) ? sp.cliente : "todos";
+  const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
+  const exportar = new URLSearchParams({ historico: "1" });
+  if (!admin) exportar.set("pessoa", meuId);
+  else if (pessoa !== "todas") exportar.set("pessoa", pessoa);
+  if (cliente !== "todos") exportar.set("cliente", cliente);
+  if (area !== "todas") exportar.set("area", area);
+  if (periodo !== "todos") exportar.set("periodo", periodo);
+  if (q) exportar.set("q", q);
 
   let consulta = supabase
     .from("v_tarefas")
-    .select("id,titulo,cliente,area,responsavel_id,responsavel,prazo,concluida_em,concluida_por,arquivada_em")
+    .select("id,titulo,cliente,cliente_id,area,area_id,responsavel_id,responsavel,prazo,concluida_em,concluida_por,arquivada_em")
     .eq("status", "concluida")
     .not("concluida_em", "is", null)
     .order("concluida_em", { ascending: false })
@@ -65,6 +81,8 @@ export default async function Historico({
     const desde = new Date(Date.now() - Number(periodo) * 86400000).toISOString();
     consulta = consulta.gte("concluida_em", desde);
   }
+  if (cliente !== "todos") consulta = consulta.eq("cliente_id", cliente);
+  if (area !== "todas") consulta = consulta.eq("area_id", area);
   if (q) consulta = consulta.ilike("titulo", `%${q.replace(/[%_,()]/g, " ")}%`);
 
   const { data, error } = await consulta;
@@ -78,7 +96,7 @@ export default async function Historico({
       <h1 className="mt-1.5 text-[30px] font-semibold leading-none tracking-tight">Histórico</h1>
 
       <div className="mt-6">
-        <FiltrosHistorico admin={admin} pessoas={pessoas} pessoa={pessoa} periodo={periodo} q={q} />
+        <FiltrosHistorico admin={admin} pessoas={pessoas} pessoa={pessoa} periodo={periodo} q={q} clientes={clientes} areas={areas} cliente={cliente} area={area} />
       </div>
 
       {error && (
@@ -90,6 +108,7 @@ export default async function Historico({
       <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-tx2">
         <span><b className="mono text-base font-medium text-tx">{String(itens.length).padStart(2, "0")}</b> concluídas</span>
         {comPrazo > 0 && <span><b className="mono text-base font-medium text-tx">{noPrazo}</b> de {comPrazo} com prazo, no prazo</span>}
+        <a className="btn btn-ghost ml-auto" href={`/exportar?${exportar.toString()}`} download><Download size={15} /> Exportar</a>
         {itens.length === LIMITE && <span className="text-tx3">Mostrando as {LIMITE} mais recentes. Use os filtros para refinar.</span>}
       </div>
 

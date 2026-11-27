@@ -3,21 +3,25 @@
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { Opcao } from "@/lib/tipos";
+import type { Area, Opcao } from "@/lib/tipos";
 
 export function FiltrosHistorico({
-  admin, pessoas, pessoa, periodo, q,
-}: { admin: boolean; pessoas: Opcao[]; pessoa: string; periodo: string; q: string }) {
+  admin, pessoas, pessoa, periodo, q, clientes, areas, cliente, area,
+}: { admin: boolean; pessoas: Opcao[]; pessoa: string; periodo: string; q: string; clientes: Opcao[]; areas: Area[]; cliente: string; area: string }) {
   const router = useRouter();
   const [busca, setBusca] = useState(q);
 
-  function ir(novo: { pessoa?: string; periodo?: string; q?: string }) {
+  function ir(novo: { pessoa?: string; periodo?: string; q?: string; cliente?: string; area?: string }) {
     const p = new URLSearchParams();
     const pes = novo.pessoa ?? pessoa;
     const per = novo.periodo ?? periodo;
     const qq = (novo.q ?? busca).trim();
     if (admin && pes && pes !== "todas") p.set("pessoa", pes);
     if (per !== "30") p.set("periodo", per);
+    const cli = novo.cliente ?? cliente;
+    const are = novo.area ?? area;
+    if (cli !== "todos") p.set("cliente", cli);
+    if (are !== "todas") p.set("area", are);
     if (qq) p.set("q", qq);
     const qs = p.toString();
     router.push(qs ? `/historico?${qs}` : "/historico");
@@ -43,6 +47,20 @@ export function FiltrosHistorico({
           </select>
         </div>
       )}
+      <div>
+        <label htmlFor="h-cliente" className="label mb-1.5 block">Cliente</label>
+        <select id="h-cliente" className="field !h-9 !w-auto min-w-[170px]" value={cliente} onChange={(e) => ir({ cliente: e.target.value })}>
+          <option value="todos">Todos</option>
+          {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </select>
+      </div>
+      <div>
+        <label htmlFor="h-area" className="label mb-1.5 block">Área</label>
+        <select id="h-area" className="field !h-9 !w-auto min-w-[140px]" value={area} onChange={(e) => ir({ area: e.target.value })}>
+          <option value="todas">Todas</option>
+          {areas.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
+        </select>
+      </div>
       <div className="min-w-[200px] flex-1">
         <label htmlFor="h-busca" className="label mb-1.5 block">Buscar no título</label>
         <div className="relative">

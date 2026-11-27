@@ -17,9 +17,18 @@ export async function GET(req: NextRequest) {
   let consulta = supabase
     .from("v_tarefas")
     .select("titulo,cliente,area,lancamentos,responsavel,status,estado_atual,proxima_acao,bloco,prazo,prazo_vez,atrasada,concluida_em")
-    .is("arquivada_em", null)
     .order("prazo_vez", { ascending: true, nullsFirst: false })
     .limit(5000);
+  // Histórico: só concluídas (inclui as arquivadas), com período e busca no título
+  const historico = q.get("historico") === "1";
+  if (!historico) consulta = consulta.is("arquivada_em", null);
+  else {
+    consulta = consulta.eq("status", "concluida").not("concluida_em", "is", null).order("concluida_em", { ascending: false });
+    const periodo = Number(q.get("periodo"));
+    if ([7, 30, 90].includes(periodo)) consulta = consulta.gte("concluida_em", new Date(Date.now() - periodo * 86400000).toISOString());
+    const busca = (q.get("q") ?? "").trim().slice(0, 80).replace(/[%_,()]/g, " ");
+    if (busca) consulta = consulta.ilike("titulo", `%${busca}%`);
+  }
   const lanc = q.get("lanc");
   if (lanc && uuid.test(lanc)) consulta = consulta.contains("lancamento_ids", [lanc]);
   const pessoa = q.get("pessoa");
@@ -28,7 +37,7 @@ export async function GET(req: NextRequest) {
     const v = q.get(param);
     if (v && uuid.test(v)) consulta = consulta.eq(coluna, v);
   }
-  if (q.get("concluidas") !== "1") consulta = consulta.neq("status", "concluida");
+  if (!historico && q.get("concluidas") !== "1") consulta = consulta.neq("status", "concluida");
 
   const { data, error } = await consulta;
   if (error) return new NextResponse("Não consegui exportar agora. Tente de novo.", { status: 500 });
@@ -46,7 +55,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(escreverCsv(linhas), {
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="tarefas-${hoje}.csv"`,
+      "content-disposition": `attachment; filename="${historico ? "historico" : "tarefas"}-${hoje}.csv"`,
       "cache-control": "no-store",
     },
   });

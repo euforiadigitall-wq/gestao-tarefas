@@ -169,16 +169,16 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
           )}
           {admin && !esteira && pessoas.length > 0 && (
             <div>
-              <p className="label mb-1.5">Passar a tarefa para outra pessoa</p>
+              <p className="label mb-1.5">Transferir tarefa</p>
               <div className="flex flex-wrap items-center gap-2">
                 <select aria-label="Passar para" className="field !h-9 !w-auto min-w-[170px]" value={paraId} onChange={(e) => setParaId(e.target.value)}>
-                  <option value="">Escolha quem recebe</option>
+                  <option value="">Para quem?</option>
                   {pessoas.filter((p) => p.id !== t.responsavel_id).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
                 <label className="flex items-center gap-1.5 text-[13px] text-tx2">
                   <input type="checkbox" checked={manter} onChange={(e) => setManter(e.target.checked)} /> Manter {t.responsavel?.split(" ")[0] ?? "quem tem"} junto
                 </label>
-                <button type="button" className="btn" disabled={pendente || !paraId} onClick={() => rodar(() => transferirTarefa(t.id, paraId, manter))}>Passar tarefa</button>
+                <button type="button" className="btn" disabled={pendente || !paraId} onClick={() => rodar(() => transferirTarefa(t.id, paraId, manter))}>Transferir tarefa</button>
               </div>
             </div>
           )}
