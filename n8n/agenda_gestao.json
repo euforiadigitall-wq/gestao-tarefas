@@ -1,0 +1,361 @@
+{
+  "name": "EuforIA · Agenda ↔ Gestão",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 7-22 * * 1-6"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        208
+      ],
+      "id": "b39d30a5-9831-4a35-8efb-37d5e7f4fbe4",
+      "name": "A cada 30 min (7h às 22h, seg a sáb)"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/calendar/v3/calendars/contato%40euforiadigital.com/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={{ JSON.stringify({ timeMin: $now.minus({days:1}).toUTC().toISO(), timeMax: $now.plus({days:30}).toUTC().toISO(), singleEvents: true, showDeleted: true, orderBy: 'startTime', maxResults: 2500 }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -896,
+        208
+      ],
+      "id": "d359e978-abbd-4b26-aa29-453f297c467e",
+      "name": "Ler agenda",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Credencial: a mesma do fluxo antigo (Google Calendar OAuth2)."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_agenda_ler(current_date - 1, current_date + 30) as r",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -688,
+        208
+      ],
+      "id": "ffc2c958-3d4d-4b3f-a6a7-0349de5fdc3f",
+      "name": "Ler gestão",
+      "executeOnce": true,
+      "notes": "Credencial: Postgres Gestão EuforIA (usuário gestao_n8n)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agenda <-> Gestão: decide o que criar e reagendar. Nunca apaga nada, nunca conclui tarefa, nunca troca responsável.\n// Regra: tarefa do gestão com horário é compromisso. Evento aceito na agenda vira tarefa. Tarefa com horário vira evento.\nconst TZ = 'America/Sao_Paulo';\nconst CAL = 'contato@euforiadigital.com';\nconst JANELA_DIAS = 14;\nconst CARENCIA_MIN = 30; // tarefa nova espera 30 min antes de virar evento (dá tempo de marcar o convite à mão)\n\n// Gente da casa sem cadastro no gestão: não conta como convidado externo\nconst INTERNOS = ['cs.euforiadigital@gmail.com', 'rapha@jatobapassos.com', 'rafinhadutg@gmail.com'];\n// Palavras que não servem para dizer que dois nomes são o mesmo compromisso\nconst STOP = new Set(['para', 'com', 'dos', 'das', 'the', 'and', 'uma', 'por', 'sem', 'reuniao', 'encontro', 'call', 'euforia', 'arco', 'gestao']);\n\nconst agora = Date.now();\nconst fim = agora + JANELA_DIAS * 864e5;\n\nconst norm = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\nconst chave = s => norm(s).replace(/[^a-z0-9]+/g, ' ').trim();\nconst palavras = s => new Set(chave(s).split(' ').filter(w => w.length >= 3 && !STOP.has(w)));\nconst compartilha = (a, b) => { if (chave(a) === chave(b)) return true; const A = palavras(a); for (const w of palavras(b)) if (A.has(w)) return true; return false; };\nconst minuto = ms => Math.floor(ms / 60000);\nconst dia = ms => DateTime.fromMillis(ms, { zone: TZ }).toFormat('yyyy-LL-dd');\nconst hora = ms => DateTime.fromMillis(ms, { zone: TZ }).toFormat('HH:mm');\nconst fmt = ms => DateTime.fromMillis(ms, { zone: TZ }).toFormat('dd/LL HH:mm');\nconst idEvento = tarefaId => 'gt' + String(tarefaId).replace(/-/g, ''); // o Google só aceita 0-9 e a-v em id de evento; g, t e os hex do uuid cabem\n\nconst lido = $('Ler gestão').first().json.r || {};\nconst tarefas = lido.tarefas || [];\nconst emailsEquipe = new Set((lido.equipe || []).map(p => String(p.email).toLowerCase()));\nconst eventos = [];\nfor (const it of $('Ler agenda').all()) for (const e of (it.json.items || [])) eventos.push(e);\nconst tarefaPorId = new Map(tarefas.map(t => [t.id, t]));\n\nconst inicioEv = e => (e.start && e.start.dateTime) ? Date.parse(e.start.dateTime) : null;\nconst fimEv = e => (e.end && e.end.dateTime) ? Date.parse(e.end.dateTime) : null;\nconst aceitoOuNosso = e => {\n  const org = ((e.organizer && e.organizer.email) || '').toLowerCase();\n  if (org === CAL) return true;\n  const eu = (e.attendees || []).find(a => a.self || (a.email || '').toLowerCase() === CAL);\n  return !!(eu && eu.responseStatus === 'accepted');\n};\nconst eventoValido = e => e.status !== 'cancelled' && inicioEv(e) !== null && e.transparency !== 'transparent' && aceitoOuNosso(e);\nconst eventoConta = e => eventoValido(e) && inicioEv(e) >= agora && inicioEv(e) <= fim;\nconst doGestao = e => /^gt[0-9a-f]{32}$/.test(e.id || '') || /Criado automaticamente a partir do gestão/.test(e.description || '');\nconst marcasTarefa = e => {\n  const s = new Set();\n  for (const m of (e.description || '').matchAll(/Gestão EuforIA \\(tarefa ([0-9a-f-]{36})\\)/g)) s.add(m[1]);\n  const m = /^gt([0-9a-f]{8})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{4})([0-9a-f]{12})$/.exec(e.id || '');\n  if (m) s.add(m.slice(1).join('-'));\n  return s;\n};\nconst dueMs = t => (t.prazo && t.horario) ? DateTime.fromISO(`${t.prazo}T${t.horario}`, { zone: TZ }).toMillis() : null;\nconst pessoal = t => { const n = norm(t.titulo); return n.includes('[pessoal]') || n.includes('[psi]'); };\nconst tarefaConta = t => {\n  if (t.concluida || t.agenda_evento_id || pessoal(t)) return false;\n  const d = dueMs(t);\n  return !!d && d >= agora && d <= fim;\n};\nconst primeiroNome = a => {\n  let base = (a.nome || '').trim().split(/\\s+/)[0];\n  if (!base) base = a.email.split('@')[0].split(/[._\\-0-9]+/).filter(Boolean)[0] || a.email;\n  return base.charAt(0).toUpperCase() + base.slice(1);\n};\n\nconst acoes = [];\nconst duvidas = [];\n\n// Passo 1: Agenda -> Gestão\nconst novas = []; // criadas nesta rodada, para não duplicar\nlet eventosContam = 0;\nfor (const e of eventos) {\n  if (!eventoConta(e)) continue;\n  eventosContam++;\n  if (doGestao(e)) continue; // evento que nasceu de tarefa do gestão nunca volta para o gestão\n  const convidados = (e.attendees || [])\n    .map(a => ({ email: (a.email || '').toLowerCase(), nome: a.displayName || '' }))\n    .filter(a => a.email && a.email !== CAL && !a.email.endsWith('@resource.calendar.google.com'));\n  const daEquipe = convidados.filter(a => emailsEquipe.has(a.email)).map(a => a.email);\n  const externos = convidados.filter(a => !emailsEquipe.has(a.email) && !INTERNOS.includes(a.email) && !a.email.endsWith('@euforiadigital.com'));\n\n  let nome = (e.summary || '(sem título)').replace(/\\s+/g, ' ').trim();\n  if (!nome.startsWith('[') && externos.length) nome = `[${primeiroNome(externos[0])}] ${nome}`;\n  const ini = inicioEv(e);\n\n  let par = false, duvida = false;\n  for (const t of [...tarefas, ...novas]) {\n    if (t.agenda_evento_id === e.id) { par = true; break; }\n    const d = dueMs(t) || (t.prazo ? DateTime.fromISO(t.prazo, { zone: TZ }).toMillis() : null);\n    if (!d) continue;\n    if (t.horario) {\n      if (dia(d) === dia(ini) && chave(t.titulo) === chave(nome)) { par = true; break; }\n      if (dia(d) === dia(ini) && chave(t.titulo) === chave(e.summary)) { par = true; break; }\n      if (minuto(d) !== minuto(ini)) continue;\n      if (compartilha(e.summary, t.titulo)) { par = true; break; }\n      duvida = true;\n    } else if (dia(d) === dia(ini) && chave(t.titulo) === chave(e.summary)) { par = true; break; }\n  }\n  if (par) continue;\n  if (duvida) { duvidas.push(`Evento \"${nome}\" (${fmt(ini)}): já existe tarefa nesse horário com outro nome. Não criei.`); continue; }\n\n  const video = ((e.conferenceData && e.conferenceData.entryPoints) || []).find(p => p.entryPointType === 'video');\n  const meet = e.hangoutLink || (video && video.uri);\n  const notas = [`Agenda: ${e.htmlLink}`, meet ? `Meet: ${meet}` : null, 'Criada automaticamente a partir da agenda.'].filter(Boolean).join('\\n\\n');\n  novas.push({ id: null, titulo: nome, prazo: dia(ini), horario: hora(ini), agenda_evento_id: e.id });\n  acoes.push({ tipo: 'criar_tarefa', rotulo: `${nome} · ${fmt(ini)}`, titulo: nome, prazo: dia(ini), horario: hora(ini), emails: JSON.stringify(daEquipe), evento_id: e.id, notas });\n}\n\n// Passo 2: tarefa que nasceu da agenda segue a agenda (remarcação e cancelamento)\nconst evPorId = new Map(eventos.map(e => [e.id, e]));\nfor (const t of tarefas) {\n  if (t.concluida || !t.agenda_evento_id) continue;\n  const e = evPorId.get(t.agenda_evento_id);\n  if (!e) continue; // evento fora da janela lida: não mexe\n  if (e.status === 'cancelled') {\n    if (!t.titulo.startsWith('[Cancelada na agenda]')) acoes.push({ tipo: 'atualizar_tarefa', rotulo: `cancelada: ${t.titulo}`, tarefa_id: t.id, prazo: '', horario: '', titulo: `[Cancelada na agenda] ${t.titulo}` });\n    continue;\n  }\n  const ini = inicioEv(e);\n  if (ini === null) continue;\n  const d = dueMs(t);\n  if (d === null || minuto(ini) !== minuto(d)) {\n    acoes.push({ tipo: 'atualizar_tarefa', rotulo: `${t.titulo}: ${d ? fmt(d) : 'sem horário'} → ${fmt(ini)}`, tarefa_id: t.id, prazo: dia(ini), horario: hora(ini), titulo: '' });\n  }\n}\n\n// Passo 2b: evento que nasceu do gestão segue a tarefa (remarcação feita no gestão)\nconst movidas = new Set();\nfor (const e of eventos) {\n  if (e.status === 'cancelled' || !doGestao(e)) continue;\n  const ini = inicioEv(e), fimE = fimEv(e);\n  if (ini === null) continue;\n  const t = [...marcasTarefa(e)].map(id => tarefaPorId.get(id)).find(Boolean);\n  if (!t || movidas.has(t.id) || t.concluida || pessoal(t)) continue;\n  const d = dueMs(t);\n  if (!d || d < agora) continue;\n  if (minuto(d) === minuto(ini)) continue;\n  movidas.add(t.id);\n  const dur = (fimE && fimE > ini) ? fimE - ini : 3600000;\n  const novoIni = DateTime.fromMillis(d, { zone: TZ });\n  acoes.push({\n    tipo: 'atualizar_evento', event_id: e.id, rotulo: `${t.titulo}: ${fmt(ini)} → ${fmt(d)}`,\n    corpo: {\n      start: { dateTime: novoIni.toISO({ suppressMilliseconds: true }), timeZone: TZ },\n      end: { dateTime: novoIni.plus({ milliseconds: dur }).toISO({ suppressMilliseconds: true }), timeZone: TZ },\n    },\n  });\n}\n\n// Passo 3: Gestão -> Agenda (tarefas iguais no mesmo horário viram UM evento)\nconst grupos = new Map();\nfor (const t of tarefas) {\n  if (!tarefaConta(t)) continue;\n  if (t.criado_em && (agora - Date.parse(t.criado_em)) < CARENCIA_MIN * 60000) continue; // ainda na carência\n  const k = `${minuto(dueMs(t))}|${chave(t.titulo)}`;\n  if (!grupos.has(k)) grupos.set(k, []);\n  grupos.get(k).push(t);\n}\nfor (const grupo of grupos.values()) {\n  grupo.sort((a, b) => (a.id < b.id ? -1 : 1));\n  const t0 = grupo[0];\n  const ids = new Set(grupo.map(t => t.id));\n  const fixo = idEvento(t0.id);\n  const d = dueMs(t0);\n  let par = false, duvida = false;\n  for (const e of eventos) {\n    const ligado = e.id === fixo || [...marcasTarefa(e)].some(id => ids.has(id));\n    if (e.status === 'cancelled') { if (ligado) { par = true; break; } continue; } // apagado na agenda: respeita, não recria\n    if (ligado) { par = true; break; }\n    const ini = inicioEv(e);\n    if (ini === null) continue;\n    if (dia(ini) === dia(d) && chave(e.summary) === chave(t0.titulo)) { par = true; break; }\n    if (minuto(ini) !== minuto(d)) continue;\n    if (compartilha(e.summary, t0.titulo)) { par = true; break; }\n    if (eventoValido(e)) duvida = true;\n  }\n  if (par) continue;\n  if (duvida) { duvidas.push(`Tarefa \"${t0.titulo}\" (${fmt(d)}): já existe evento nesse horário com outro nome. Não criei.`); continue; }\n  const emails = [...new Set(grupo.map(t => (t.responsavel_emails || [])[0]).filter(Boolean))];\n  const inicio = DateTime.fromMillis(d, { zone: TZ });\n  acoes.push({\n    tipo: 'criar_evento', rotulo: `${t0.titulo} · ${fmt(d)}${grupo.length > 1 ? ` (${grupo.length} tarefas, 1 evento)` : ''}`,\n    corpo: {\n      id: fixo,\n      summary: t0.titulo,\n      start: { dateTime: inicio.toISO({ suppressMilliseconds: true }), timeZone: TZ },\n      end: { dateTime: inicio.plus({ hours: 1 }).toISO({ suppressMilliseconds: true }), timeZone: TZ },\n      attendees: emails.map(email => ({ email })),\n      description: `${grupo.map(t => `Gestão EuforIA (tarefa ${t.id})`).join('\\n')}\\n\\nCriado automaticamente a partir do gestão.`,\n      conferenceData: { createRequest: { requestId: `gt-${t0.id}-${minuto(d)}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } },\n    },\n  });\n}\n\nconst resumo = {\n  tipo: 'resumo',\n  eventos_lidos: eventos.length,\n  eventos_que_contam: eventosContam,\n  tarefas_lidas: tarefas.length,\n  tarefas_a_criar: acoes.filter(a => a.tipo === 'criar_tarefa').map(a => a.rotulo),\n  eventos_a_criar: acoes.filter(a => a.tipo === 'criar_evento').map(a => a.rotulo),\n  tarefas_reagendadas: acoes.filter(a => a.tipo === 'atualizar_tarefa').map(a => a.rotulo),\n  eventos_reagendados: acoes.filter(a => a.tipo === 'atualizar_evento').map(a => a.rotulo),\n  duvidas,\n};\n\nreturn [...acoes, resumo].map(json => ({ json }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        208
+      ],
+      "id": "4b9ef41e-1889-4939-8cab-7f47069cacc8",
+      "name": "Planejar"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "criar_tarefa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9bc24183-2fb0-423d-888b-31020328c847"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "criar_tarefa"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "atualizar_tarefa",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "177cbe0b-124b-4d95-a9a2-d63df91fd3ec"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar_tarefa"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "criar_evento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "438c5f38-33da-43f5-a9b6-fe62c67b834f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "criar_evento"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tipo }}",
+                    "rightValue": "atualizar_evento",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "919b5a8a-820d-48f6-88c0-37d4f4019288"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "atualizar_evento"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -240,
+        208
+      ],
+      "id": "e9e01a9f-f8a0-4acc-861e-25a4fde9c1d1",
+      "name": "Tipo de ação"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_agenda_criar($1, $2::date, $3::time, $4::jsonb, $5, $6) as id",
+        "options": {
+          "queryReplacement": "={{ [ $json.titulo, $json.prazo, $json.horario, $json.emails, $json.evento_id, $json.notas ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "82d6b029-70b8-4255-a938-06bb73e74188",
+      "name": "Criar tarefa no gestão",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_agenda_atualizar($1::uuid, nullif($2, '')::date, nullif($3, '')::time, nullif($4, '')) as id",
+        "options": {
+          "queryReplacement": "={{ [ $json.tarefa_id, $json.prazo, $json.horario, $json.titulo ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        208
+      ],
+      "id": "111e1b8e-3e8e-4911-b84c-68f9b85a8d3e",
+      "name": "Atualizar tarefa no gestão",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/contato%40euforiadigital.com/events?conferenceDataVersion=1&sendUpdates=none",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.corpo) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        400
+      ],
+      "id": "1eedd321-f65f-4962-9494-584dccd6a983",
+      "name": "Criar evento",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://www.googleapis.com/calendar/v3/calendars/contato%40euforiadigital.com/events/{{ $json.event_id }}?sendUpdates=none",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleCalendarOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.corpo) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        600
+      ],
+      "id": "03e608a3-8657-4c59-9472-f73c4a5213af",
+      "name": "Atualizar evento",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    }
+  ],
+  "connections": {
+    "A cada 30 min (7h às 22h, seg a sáb)": {
+      "main": [
+        [
+          {
+            "node": "Ler agenda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler agenda": {
+      "main": [
+        [
+          {
+            "node": "Ler gestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler gestão": {
+      "main": [
+        [
+          {
+            "node": "Planejar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Planejar": {
+      "main": [
+        [
+          {
+            "node": "Tipo de ação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de ação": {
+      "main": [
+        [
+          {
+            "node": "Criar tarefa no gestão",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizar tarefa no gestão",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Criar evento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Atualizar evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo",
+    "availableInMCP": true
+  },
+  "active": false
+}

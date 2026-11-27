@@ -1,0 +1,36 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Monta o pedido para o gestão: o banco cria as 7 tarefas do onboarding (a regra de prazos e responsáveis está na função srv_onboarding_arco).\nconst d = $('Escolhe card').first().json;\nconst link = $('Provisiona no portal').first().json;\nconst cfg = $('Config').first().json;\nconst rodape = `Pasta do cliente: dentro de ARCO no Drive (https://drive.google.com/drive/folders/19AC0X4Q25SluBrujiwDEgumBUa2VFkrP), criada pela rotina de rascunhos.\\nCriada automaticamente pelo fluxo de onboarding (contrato: ${d.nome_documento}).` + (d.card_id ? `\\nCard no CRM: ${d.card_id}` : '') + (link.cliente_id ? `\\nPortal: ${cfg.PORTAL_URL}/admin/cliente/${link.cliente_id}` : '');\nreturn [{ json: { cliente: d.cliente, rodape } }];\n"
+      },
+      "id": "21ede600-03bf-4382-b593-f90495921e1a",
+      "name": "Monta tarefas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4096,
+        1216
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_onboarding_arco($1, $2) as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.cliente, $json.rodape ] }}"
+        }
+      },
+      "id": "a0c4c4aa-cb6f-46e7-8cd2-3b6ae2e74e9b",
+      "name": "Cria no gestão",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -3888,
+        1216
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n. Se a Autentique repetir o aviso, o banco pula o que já existe."
+    }
+  ],
+  "connections": {}
+}

@@ -1,0 +1,23 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_comentar($1::uuid, $2, 'Formulário da pesquisa') as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+        }
+      },
+      "id": "d1000000-0000-4000-8000-000000000003",
+      "name": "Comenta na tarefa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        0
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n."
+    }
+  ],
+  "connections": {}
+}

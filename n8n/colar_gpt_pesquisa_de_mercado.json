@@ -1,0 +1,41 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_comentar($1::uuid, $2, 'GPT (pesquisa de mercado)') as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id, $json.comment_text ] }}"
+        }
+      },
+      "id": "d1000000-0000-4000-8000-000000000001",
+      "name": "Comenta relatório",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        208,
+        0
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_comentar($1::uuid, $2, 'GPT (pesquisa de mercado)') as r",
+        "options": {
+          "queryReplacement": "={{ [ $('Valida pedido').first().json.task_id, 'ROTINA: a pesquisa no GPT não terminou (status ' + $json.status + ($json.erro ? ': ' + $json.erro : '') + '). A consolidação vai usar só a pesquisa do Claude.' ] }}"
+        }
+      },
+      "id": "d1000000-0000-4000-8000-000000000002",
+      "name": "Comenta falha",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        208,
+        400
+      ],
+      "notes": "Credencial: Postgres do usuário gestao_n8n."
+    }
+  ],
+  "connections": {}
+}
