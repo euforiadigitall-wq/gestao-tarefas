@@ -239,7 +239,7 @@ export default async function Agenda({
   // Prévia das recorrentes: o que ainda vai ser gerado nesse período (cada um vê as regras em que é responsável; admin vê todas)
   {
     const regrasRes = await supabase.from("recorrentes")
-      .select("id,titulo,cliente_id,area_id,responsavel_id,responsaveis_extras,lancamento_id,frequencia,dias_semana,intervalo_semanas,dia_mes,ultimo_dia_util,prazo_dias_uteis,horario,inicio,fim,ultima_geracao")
+      .select("*")
       .eq("ativo", true);
     const nomeDe = (id: string) => primeiro(pessoas.find((p) => p.id === id)?.nome ?? null);
     for (const r of (regrasRes.data ?? []) as unknown as RegraRecorrente[]) {

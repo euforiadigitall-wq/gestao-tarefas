@@ -15,7 +15,7 @@ export default async function PaginaRecorrentes() {
   const supabase = await supabaseServer();
 
   const [recRes, pesRes, cliRes, areRes, lanRes] = await Promise.all([
-    supabase.from("recorrentes").select("id,titulo,cliente_id,area_id,responsavel_id,responsaveis_extras,lancamento_id,frequencia,dias_semana,intervalo_semanas,dia_mes,ultimo_dia_util,prazo_dias_uteis,horario,inicio,fim,notas,ativo,ultima_geracao").order("ativo", { ascending: false }).order("titulo"),
+    supabase.from("recorrentes").select("*").order("ativo", { ascending: false }).order("titulo"),
     supabase.from("pessoas").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("clientes").select("id,nome").eq("ativo", true).order("nome"),
     supabase.from("areas").select("id,codigo,nome").eq("ativo", true).order("nome"),

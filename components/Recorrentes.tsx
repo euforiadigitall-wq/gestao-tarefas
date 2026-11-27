@@ -16,11 +16,15 @@ export interface LinhaRecorrente {
   responsavel_id: string;
   responsaveis_extras: string[] | null;
   lancamento_id: string | null;
-  frequencia: "diaria_util" | "semanal" | "mensal";
+  frequencia: "diaria_util" | "semanal" | "mensal" | "a_cada_n_dias";
   dias_semana: number[] | null;
   intervalo_semanas: number;
   dia_mes: number | null;
   ultimo_dia_util: boolean;
+  intervalo_dias?: number | null;
+  mensal_semana?: number | null;
+  mensal_dia_semana?: number | null;
+  prazo_corridos?: boolean;
   prazo_dias_uteis: number;
   horario: string | null;
   inicio: string;
@@ -37,22 +41,34 @@ function lista(itens: string[]): string {
   return itens.length <= 1 ? (itens[0] ?? "") : `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 
-export function descreverRegra(r: Pick<LinhaRecorrente, "frequencia" | "dias_semana" | "intervalo_semanas" | "dia_mes" | "ultimo_dia_util" | "prazo_dias_uteis">): string {
+const SEMANA_F = ["", "primeira", "segunda", "terceira", "quarta", "última"];
+const SEMANA_M = ["", "primeiro", "segundo", "terceiro", "quarto", "último"];
+const NOME_DIA: Record<number, string> = { 1: "segunda", 2: "terça", 3: "quarta", 4: "quinta", 5: "sexta", 6: "sábado", 7: "domingo" };
+
+export function descreverRegra(r: Pick<LinhaRecorrente, "frequencia" | "dias_semana" | "intervalo_semanas" | "dia_mes" | "ultimo_dia_util" | "prazo_dias_uteis" | "intervalo_dias" | "mensal_semana" | "mensal_dia_semana" | "prazo_corridos">): string {
   let quando = "Todo dia útil";
   if (r.frequencia === "semanal") {
     const dias = lista((r.dias_semana ?? []).map((n) => DIA_LONGO[n]));
     quando = r.intervalo_semanas > 1 ? `A cada ${r.intervalo_semanas} semanas, ${dias}` : `Toda ${dias}`;
+  } else if (r.frequencia === "a_cada_n_dias") {
+    quando = (r.intervalo_dias ?? 1) > 1 ? `A cada ${r.intervalo_dias} dias, contando fim de semana` : "Todo dia, contando fim de semana";
   } else if (r.frequencia === "mensal") {
-    quando = r.ultimo_dia_util ? "No último dia útil do mês" : `Todo dia ${r.dia_mes} do mês`;
+    if (r.mensal_semana && r.mensal_dia_semana) {
+      const fem = r.mensal_dia_semana <= 5;
+      quando = `${fem ? "Toda" : "Todo"} ${(fem ? SEMANA_F : SEMANA_M)[r.mensal_semana]} ${NOME_DIA[r.mensal_dia_semana]} do mês`;
+    } else {
+      quando = r.ultimo_dia_util ? "No último dia útil do mês" : `Todo dia ${r.dia_mes} do mês`;
+    }
   }
-  const prazo = r.prazo_dias_uteis === 0 ? "prazo no mesmo dia" : `prazo em ${r.prazo_dias_uteis} dia${r.prazo_dias_uteis > 1 ? "s" : ""} útil${r.prazo_dias_uteis > 1 ? "eis" : ""}`;
+  const n = r.prazo_dias_uteis;
+  const prazo = n === 0 ? "prazo no mesmo dia" : `prazo em ${n} dia${n > 1 ? "s" : ""}${r.prazo_corridos ? "" : ` útil${n > 1 ? "eis" : ""}`}`;
   return `${quando}, ${prazo}`;
 }
 
 function vazio(hoje: string, eu: string): DadosRecorrente {
   return {
     titulo: "", clienteId: "", areaId: "", responsavelId: eu, responsaveisExtras: [], lancamentoId: "", frequencia: "semanal", diasSemana: [1], intervaloSemanas: 1,
-    diaMes: 1, ultimoDiaUtil: false, prazoDiasUteis: 1, horario: "", inicio: hoje, fim: "", notas: "",
+    diaMes: 1, mensalModo: "dia", mensalSemana: 5, mensalDiaSemana: 2, intervaloDias: 10, prazoCorridos: false, prazoDiasUteis: 1, horario: "", inicio: hoje, fim: "", notas: "",
   };
 }
 
@@ -73,7 +89,8 @@ export function Recorrentes({
     setD(r ? {
       titulo: r.titulo, clienteId: r.cliente_id ?? "", areaId: r.area_id ?? "", responsavelId: r.responsavel_id, responsaveisExtras: r.responsaveis_extras ?? [], lancamentoId: r.lancamento_id ?? "",
       frequencia: r.frequencia, diasSemana: r.dias_semana ?? [1], intervaloSemanas: r.intervalo_semanas, diaMes: r.dia_mes ?? 1,
-      ultimoDiaUtil: r.ultimo_dia_util, prazoDiasUteis: r.prazo_dias_uteis, horario: r.horario?.slice(0, 5) ?? "", inicio: r.inicio, fim: r.fim ?? "", notas: r.notas ?? "",
+      mensalModo: r.ultimo_dia_util ? "ultimo_dia_util" : r.mensal_semana ? "dia_da_semana" : "dia", mensalSemana: r.mensal_semana ?? 5, mensalDiaSemana: r.mensal_dia_semana ?? 2,
+      intervaloDias: r.intervalo_dias ?? 10, prazoCorridos: !!r.prazo_corridos, prazoDiasUteis: r.prazo_dias_uteis, horario: r.horario?.slice(0, 5) ?? "", inicio: r.inicio, fim: r.fim ?? "", notas: r.notas ?? "",
     } : vazio(hoje, meuId));
     setEditando(r ? r.id : "novo");
   }
@@ -161,8 +178,8 @@ export function Recorrentes({
           <fieldset className="space-y-3 rounded-lg bg-panel2 p-4">
             <legend className="label px-1">Repetição</legend>
             <div role="tablist" aria-label="Frequência" className="inline-flex rounded-lg bg-[var(--panel)] p-1">
-              {([["diaria_util", "Todo dia útil"], ["semanal", "Dias da semana"], ["mensal", "Todo mês"]] as const).map(([v, n]) => (
-                <button key={v} type="button" role="tab" aria-selected={d.frequencia === v} onClick={() => set("frequencia", v)}
+              {([["diaria_util", "Todo dia útil"], ["semanal", "Dias da semana"], ["mensal", "Todo mês"], ["a_cada_n_dias", "A cada N dias"]] as const).map(([v, n]) => (
+                <button key={v} type="button" role="tab" aria-selected={d.frequencia === v} onClick={() => { set("frequencia", v); if (v === "a_cada_n_dias") set("prazoCorridos", true); }}
                   className={`rounded-md px-3 py-1.5 text-[13px] ${d.frequencia === v ? "bg-panel2 font-medium text-tx" : "text-tx2 hover:text-tx"}`}>{n}</button>
               ))}
             </div>
@@ -185,21 +202,46 @@ export function Recorrentes({
             )}
             {d.frequencia === "mensal" && (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-                <label className="flex items-center gap-2 text-[13px] text-tx2">
-                  <input type="checkbox" checked={d.ultimoDiaUtil} onChange={(e) => set("ultimoDiaUtil", e.target.checked)} /> Último dia útil do mês
-                </label>
-                {!d.ultimoDiaUtil && (
+                <select aria-label="Como repete no mês" className="field !h-9 !w-auto" value={d.mensalModo} onChange={(e) => set("mensalModo", e.target.value as DadosRecorrente["mensalModo"])}>
+                  <option value="dia">Em um dia fixo do mês</option>
+                  <option value="dia_da_semana">Em um dia da semana do mês (ex.: última terça)</option>
+                  <option value="ultimo_dia_util">No último dia útil do mês</option>
+                </select>
+                {d.mensalModo === "dia" && (
                   <label className="flex items-center gap-2 text-[13px] text-tx2">Dia
                     <input type="number" min={1} max={28} className="field !h-9 !w-16" value={d.diaMes} onChange={(e) => set("diaMes", Number(e.target.value))} aria-label="Dia do mês" />
                     do mês (se cair em fim de semana, gera no próximo dia útil)
                   </label>
                 )}
+                {d.mensalModo === "dia_da_semana" && (
+                  <div className="flex flex-wrap items-center gap-2 text-[13px] text-tx2">
+                    <select aria-label="Qual semana do mês" className="field !h-9 !w-auto" value={d.mensalSemana} onChange={(e) => set("mensalSemana", Number(e.target.value))}>
+                      <option value={1}>Primeira</option><option value={2}>Segunda</option><option value={3}>Terceira</option><option value={4}>Quarta</option><option value={5}>Última</option>
+                    </select>
+                    <select aria-label="Dia da semana" className="field !h-9 !w-auto" value={d.mensalDiaSemana} onChange={(e) => set("mensalDiaSemana", Number(e.target.value))}>
+                      {[1, 2, 3, 4, 5, 6, 7].map((n) => <option key={n} value={n}>{NOME_DIA[n][0].toUpperCase() + NOME_DIA[n].slice(1)}</option>)}
+                    </select>
+                    <span>do mês. A última acompanha o mês, de 4 ou de 5 semanas.</span>
+                  </div>
+                )}
               </div>
+            )}
+            {d.frequencia === "a_cada_n_dias" && (
+              <label className="flex flex-wrap items-center gap-2 text-[13px] text-tx2">A cada
+                <input type="number" min={1} max={365} className="field !h-9 !w-20" value={d.intervaloDias} onChange={(e) => set("intervaloDias", Number(e.target.value))} aria-label="Intervalo em dias" />
+                dias corridos, contando da data de início (fim de semana conta; se cair no sábado ou domingo, a tarefa aparece na sexta)
+              </label>
             )}
             <div className="flex flex-wrap items-end gap-4">
               <div>
-                <label htmlFor="rc-prazo" className="mb-1.5 block text-[13px] text-tx2">Prazo, em dias úteis depois de gerar (0 = no próprio dia)</label>
-                <input id="rc-prazo" type="number" min={0} max={30} className="field !w-24" value={d.prazoDiasUteis} onChange={(e) => set("prazoDiasUteis", Number(e.target.value))} />
+                <label htmlFor="rc-prazo" className="mb-1.5 block text-[13px] text-tx2">Prazo depois de gerar (0 = no próprio dia)</label>
+                <div className="flex items-center gap-2">
+                  <input id="rc-prazo" type="number" min={0} max={d.prazoCorridos ? 90 : 30} className="field !w-24" value={d.prazoDiasUteis} onChange={(e) => set("prazoDiasUteis", Number(e.target.value))} />
+                  <select aria-label="Tipo de dia do prazo" className="field !h-10 !w-auto" value={d.prazoCorridos ? "corridos" : "uteis"} onChange={(e) => set("prazoCorridos", e.target.value === "corridos")}>
+                    <option value="uteis">dias úteis</option>
+                    <option value="corridos">dias corridos</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <label htmlFor="rc-hora" className="mb-1.5 block text-[13px] text-tx2">Horário (opcional)</label>

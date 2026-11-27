@@ -14,11 +14,15 @@ export interface DadosRecorrente {
   responsavelId: string;
   responsaveisExtras: string[];
   lancamentoId: string;
-  frequencia: "diaria_util" | "semanal" | "mensal";
+  frequencia: "diaria_util" | "semanal" | "mensal" | "a_cada_n_dias";
   diasSemana: number[];
   intervaloSemanas: number;
   diaMes: number;
-  ultimoDiaUtil: boolean;
+  mensalModo: "dia" | "ultimo_dia_util" | "dia_da_semana";
+  mensalSemana: number;
+  mensalDiaSemana: number;
+  intervaloDias: number;
+  prazoCorridos: boolean;
   prazoDiasUteis: number;
   horario: string;
   inicio: string;
@@ -29,6 +33,8 @@ export interface DadosRecorrente {
 function traduzir(msg: string | undefined): string {
   if (!msg) return "Não foi possível salvar. Tente de novo.";
   if (msg.includes("row-level security")) return "Só admin gerencia recorrentes.";
+  if (msg.includes("column") && msg.includes("does not exist")) return "Falta rodar o script 35 no Supabase.";
+  if (msg.includes("recorrentes_frequencia_check")) return "Falta rodar o script 35 no Supabase.";
   if (msg.includes("recorrentes_regra_check")) return "Confira os dias da repetição e as datas de início e fim.";
   if (msg.includes("apenas admin")) return "Só admin faz isso.";
   return "Não foi possível salvar. Atualize a página e tente de novo.";
@@ -47,9 +53,11 @@ export async function salvarRecorrente(d: DadosRecorrente, id?: string): Promise
   if (!DATA.test(d.inicio)) return { erro: "Informe a data de início." };
   if (d.fim && (!DATA.test(d.fim) || d.fim < d.inicio)) return { erro: "O fim precisa ser depois do início." };
   if (d.frequencia === "semanal" && d.diasSemana.length === 0) return { erro: "Marque ao menos um dia da semana." };
-  if (d.frequencia === "mensal" && !d.ultimoDiaUtil && !(d.diaMes >= 1 && d.diaMes <= 28)) return { erro: "O dia do mês vai de 1 a 28." };
+  if (d.frequencia === "mensal" && d.mensalModo === "dia" && !(d.diaMes >= 1 && d.diaMes <= 28)) return { erro: "O dia do mês vai de 1 a 28." };
+  if (d.frequencia === "mensal" && d.mensalModo === "dia_da_semana" && !(d.mensalSemana >= 1 && d.mensalSemana <= 5 && d.mensalDiaSemana >= 1 && d.mensalDiaSemana <= 7)) return { erro: "Escolha a semana do mês e o dia da semana." };
+  if (d.frequencia === "a_cada_n_dias" && !(Number.isInteger(d.intervaloDias) && d.intervaloDias >= 1 && d.intervaloDias <= 365)) return { erro: "O intervalo vai de 1 a 365 dias." };
   if (d.horario && !/^([01]\d|2[0-3]):[0-5]\d$/.test(d.horario)) return { erro: "Horário inválido." };
-  if (!(d.prazoDiasUteis >= 0 && d.prazoDiasUteis <= 30)) return { erro: "O prazo vai de 0 a 30 dias úteis." };
+  if (!(Number.isInteger(d.prazoDiasUteis) && d.prazoDiasUteis >= 0 && d.prazoDiasUteis <= (d.prazoCorridos ? 90 : 30))) return { erro: d.prazoCorridos ? "O prazo vai de 0 a 90 dias." : "O prazo vai de 0 a 30 dias úteis." };
   if ((d.notas ?? "").length > 600) return { erro: "A descrição passou de 600 caracteres." };
 
   const supabase = await supabaseServer();
@@ -67,8 +75,12 @@ export async function salvarRecorrente(d: DadosRecorrente, id?: string): Promise
     dias_semana: d.frequencia === "semanal" ? [...d.diasSemana].sort() : null,
     dia_semana: null,
     intervalo_semanas: d.frequencia === "semanal" ? Math.min(8, Math.max(1, d.intervaloSemanas || 1)) : 1,
-    dia_mes: d.frequencia === "mensal" && !d.ultimoDiaUtil ? d.diaMes : null,
-    ultimo_dia_util: d.frequencia === "mensal" && d.ultimoDiaUtil,
+    dia_mes: d.frequencia === "mensal" && d.mensalModo === "dia" ? d.diaMes : null,
+    ultimo_dia_util: d.frequencia === "mensal" && d.mensalModo === "ultimo_dia_util",
+    mensal_semana: d.frequencia === "mensal" && d.mensalModo === "dia_da_semana" ? d.mensalSemana : null,
+    mensal_dia_semana: d.frequencia === "mensal" && d.mensalModo === "dia_da_semana" ? d.mensalDiaSemana : null,
+    intervalo_dias: d.frequencia === "a_cada_n_dias" ? d.intervaloDias : null,
+    prazo_corridos: d.prazoCorridos,
     prazo_dias_uteis: d.prazoDiasUteis,
     horario: d.horario || null,
     inicio: d.inicio,
