@@ -1,0 +1,211 @@
+{
+  "name": "EuforIA · Reuniões internas → fila de aprovação",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/30 7-22 * * 1-6"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "94aa98f7-a859-43ae-b161-029d5c58c2f0",
+      "name": "A cada 30 min (7h às 22h, seg a sáb)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pastas do Cérebro das Sócias que viram tarefas da equipe. Só arquivos criados nas últimas 3 horas.\nconst desde = $now.minus({ hours: 3 }).toUTC().toISO();\nconst pastas = [\n  { id: '1XFhPf0jIdxKqEJJ4n3kUXJkQLl28lwtd', nome: 'Reuniões internas', cliente: null },\n  { id: '1GzOers1azRTWDzcmTeQFpjN4up-gMGGq', nome: 'Projeto Virgínia', cliente: 'Virgínia' },\n];\nreturn pastas.map(p => ({ json: { ...p, q: `'${p.id}' in parents and mimeType = 'application/vnd.google-apps.document' and trashed = false and createdTime > '${desde}'` } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        200
+      ],
+      "id": "3ae74f42-2eb6-437e-86e9-eb80c5640c49",
+      "name": "Pastas"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={{ JSON.stringify({ q: $json.q, fields: 'files(id,name,createdTime)', pageSize: 50, supportsAllDrives: true, includeItemsFromAllDrives: true }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        200
+      ],
+      "id": "a59ab563-2582-4b9e-bc81-cd4342a488ba",
+      "name": "Listar arquivos novos",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Credencial: a conta Google dona do Cérebro das Sócias (Drive)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Um item por arquivo novo, levando a pasta junto\nconst out = [];\n$input.all().forEach((it, i) => {\n  const p = $('Pastas').all()[i]?.json || {};\n  for (const f of (it.json.files || [])) out.push({ json: { id: f.id, name: f.name, createdTime: f.createdTime, cliente: p.cliente, pasta: p.nome } });\n});\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        200
+      ],
+      "id": "0625f5d3-a0f3-4e58-84b6-9e25186b5802",
+      "name": "Separar arquivos"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/drive/v3/files/{{ $json.id }}/export",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "specifyQuery": "json",
+        "jsonQuery": "={{ JSON.stringify({ mimeType: 'text/plain' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "id": "431acdd1-2b9f-457e-8f9c-4f240e53c63c",
+      "name": "Baixar texto",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lê as notas do Gemini (seção \"Próximas etapas\") e monta a reunião para a fila de aprovação.\nconst meta = $('Separar arquivos').item.json;\nconst bruto = String($json.data ?? $json.body ?? $json ?? '');\nconst texto = bruto.replace(/\\r/g, '').replace(/\\\\([\\[\\]()_*#.-])/g, '$1');\n\n// Título \"2026-11-26 · [EuforIA] Projeto Virgínia\" -> data e nome\nconst m = String(meta.name || '').match(/^(\\d{4}-\\d{2}-\\d{2})\\s*[·\\-]\\s*(.+)$/);\nconst data = m ? m[1] : String(meta.createdTime || '').slice(0, 10);\nconst nomeReuniao = (m ? m[2] : meta.name || 'Reunião').trim();\n\n// Recorta a seção\nconst linhas = texto.split('\\n');\nconst ini = linhas.findIndex(l => /pr[óo]ximas\\s+etapas/i.test(l));\nif (ini < 0) return [];   // sem a seção: a reunião não gera nada\nlet fim = linhas.length;\nfor (let i = ini + 1; i < linhas.length; i++) {\n  if (/^\\s*#{1,4}\\s*\\**\\s*(detalhes|transcri)/i.test(linhas[i]) || /^\\s*\\**\\s*detalhes\\s*\\**\\s*$/i.test(linhas[i])) { fim = i; break; }\n}\nconst secao = linhas.slice(ini + 1, fim);\n\n// Quem do time é quem (nome da nota -> como o gestão conhece)\nconst ALIAS = { 'raphael jatobá passos': 'Rapha', 'raphael': 'Rapha', 'rafael rodrigues': 'Rafael', 'bia cs - euforia digital': 'Bia', 'bia': 'Bia', 'jony nascimento': 'Jony' };\nconst SEM_DONO = ['euforia digital', 'euforia', 'time', 'equipe'];\n\n// Prazo padrão: 2 dias úteis depois da reunião (a Bia ajusta na tela)\nconst somarUteis = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); let f = 0; while (f < n) { d.setUTCDate(d.getUTCDate() + 1); const w = d.getUTCDay(); if (w !== 0 && w !== 6) f++; } return d.toISOString().slice(0, 10); };\nconst prazo = /^\\d{4}-\\d{2}-\\d{2}$/.test(data) ? somarUteis(data, 2) : null;\n\nconst itens = [];\nlet atual = null;\nfor (const l of secao) {\n  const t = l.trim();\n  if (!t) continue;\n  const r = t.match(/^(?:[-*•●○▪]\\s*)?\\[(.+?)\\]\\s*([^:]{2,120}?):\\s*(.*)$/);\n  if (r) {\n    const quem = r[1].trim();\n    const chave = quem.toLowerCase();\n    atual = { titulo: r[2].trim(), responsavel: SEM_DONO.includes(chave) ? null : (ALIAS[chave] || quem), prazo, destino: 'equipe', notas: r[3].trim() || null };\n    itens.push(atual);\n  } else if (atual && !/^#{1,4}\\s/.test(t)) {\n    atual.notas = ((atual.notas || '') + ' ' + t).trim();   // continuação da descrição\n  }\n}\nif (!itens.length) return [];\n\nreturn [{ json: {\n  titulo: nomeReuniao, data, tipo: 'interna', origem: meta.id, cliente: meta.cliente || null,\n  resumo: (texto.match(/###\\s*\\**Resumo\\**\\s*\\n([\\s\\S]*?)\\n###/i) || [, ''])[1].replace(/\\*\\*/g, '').replace(/\\s+/g, ' ').trim().slice(0, 600) || null,\n  itens: JSON.stringify(itens),\n} }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        200
+      ],
+      "id": "3fc78ce6-cbe0-43cc-be91-7a1d774d5c86",
+      "name": "Extrair próximas etapas",
+      "notes": "Lê a seção 'Próximas etapas' das notas do Gemini: [Pessoa] Título: descrição. Sem a seção, não gera nada. Prazo padrão: 2 dias úteis depois da reunião (a Bia ajusta na tela Reuniões)."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select gestao.srv_reuniao_propor($1, $2::date, $3, $4, $5, $6::jsonb, $7) as r",
+        "options": {
+          "queryReplacement": "={{ [ $json.titulo, $json.data, $json.tipo, $json.origem, $json.cliente || '', $json.itens, $json.resumo || '' ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        200
+      ],
+      "id": "0ff0aada-9b69-445f-ad5c-796c0152f10f",
+      "name": "Mandar para a fila de aprovação",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "notes": "Credencial: Postgres Gestão EuforIA (usuário gestao_n8n). Não cria tarefa: só grava a proposta. Não repete a mesma reunião (usa o id do arquivo)."
+    }
+  ],
+  "connections": {
+    "A cada 30 min (7h às 22h, seg a sáb)": {
+      "main": [
+        [
+          {
+            "node": "Pastas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pastas": {
+      "main": [
+        [
+          {
+            "node": "Listar arquivos novos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar arquivos novos": {
+      "main": [
+        [
+          {
+            "node": "Separar arquivos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar arquivos": {
+      "main": [
+        [
+          {
+            "node": "Baixar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Baixar texto": {
+      "main": [
+        [
+          {
+            "node": "Extrair próximas etapas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair próximas etapas": {
+      "main": [
+        [
+          {
+            "node": "Mandar para a fila de aprovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
