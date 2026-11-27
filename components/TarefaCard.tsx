@@ -3,7 +3,7 @@
 import { Etiquetas } from "@/components/Etiqueta";
 import { Check, ChevronDown, ExternalLink, Loader2, Undo2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, mudarPrazo, mudarTitulo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
+import { adicionarLink, avancarEtapa, concluirTarefa, definirResponsaveis, devolverEtapa, transferirTarefa, mudarPrazo, mudarTitulo, removerLink, salvarDescricao } from "@/app/(app)/hoje/actions";
 import { Comentarios } from "@/components/Comentarios";
 import { Esteira } from "@/components/Esteira";
 import { AcoesTarefa } from "@/components/AcoesTarefa";
@@ -26,7 +26,7 @@ const trilho: Record<TomPrazo, string> = {
   neutro: "bg-[var(--line-strong)]",
 };
 
-export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], abrirDetalhes = false }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[]; abrirDetalhes?: boolean }) {
+export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], abrirDetalhes = false, donoId }: { t: TarefaView; hoje: string; links?: TarefaLink[]; admin?: boolean; pessoas?: Opcao[]; abrirDetalhes?: boolean; donoId?: string }) {
   const [pendente, iniciar] = useTransition();
   const [devolvendo, setDevolvendo] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -39,6 +39,8 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
   const [novoTitulo, setNovoTitulo] = useState(t.titulo);
   const [coIds, setCoIds] = useState<string[]>(t.co_responsavel_ids ?? []);
   const [coSalvo, setCoSalvo] = useState(true);
+  const [paraId, setParaId] = useState("");
+  const [manter, setManter] = useState(false);
   const prazo = descreverPrazo(t.prazo_vez ?? t.prazo, hoje);
   const esteira = t.etapa_atual !== null;
 
@@ -64,6 +66,7 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
           <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-tx2">
             {t.cliente ? <span>{t.cliente}</span> : <span className="text-tx3">Interna</span>}
             {t.area && <span className="mono text-tx3">· {t.area}</span>}
+            {donoId && t.responsavel_id && t.responsavel_id !== donoId && t.responsavel && <span className="chip bg-infobg text-info" title="Você participa; quem responde é outra pessoa">Responsável: {t.responsavel.split(" ")[0]}</span>}
             {t.co_responsaveis && <span className="chip bg-panel2 text-tx2" title="Também é responsável">com {t.co_responsaveis}</span>}
             {esteira && (
               <>
@@ -161,6 +164,21 @@ export function TarefaCard({ t, hoje, links = [], admin = false, pessoas = [], a
                 <button type="button" className="btn" disabled={pendente || coSalvo} onClick={() => rodar(async () => { const r = await definirResponsaveis(t.id, coIds); if (!r.erro) setCoSalvo(true); return r; })}>
                   Salvar responsáveis
                 </button>
+              </div>
+            </div>
+          )}
+          {admin && !esteira && pessoas.length > 0 && (
+            <div>
+              <p className="label mb-1.5">Passar a tarefa para outra pessoa</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select aria-label="Passar para" className="field !h-9 !w-auto min-w-[170px]" value={paraId} onChange={(e) => setParaId(e.target.value)}>
+                  <option value="">Escolha quem recebe</option>
+                  {pessoas.filter((p) => p.id !== t.responsavel_id).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+                <label className="flex items-center gap-1.5 text-[13px] text-tx2">
+                  <input type="checkbox" checked={manter} onChange={(e) => setManter(e.target.checked)} /> Manter {t.responsavel?.split(" ")[0] ?? "quem tem"} junto
+                </label>
+                <button type="button" className="btn" disabled={pendente || !paraId} onClick={() => rodar(() => transferirTarefa(t.id, paraId, manter))}>Passar tarefa</button>
               </div>
             </div>
           )}

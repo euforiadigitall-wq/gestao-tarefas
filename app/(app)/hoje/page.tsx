@@ -162,7 +162,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
 
       {atrasadas.length > 0 && (
         <Secao titulo="Atrasadas" n={atrasadas.length} tom="danger">
-          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} links={linksPorTarefa.get(t.id) ?? []} />)}
+          {atrasadas.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} donoId={alvo} links={linksPorTarefa.get(t.id) ?? []} />)}
         </Secao>
       )}
 
@@ -173,7 +173,7 @@ export default async function Hoje({ searchParams }: { searchParams: Promise<{ p
             <p className="mt-1 text-sm text-tx2">Quando uma tarefa ou uma etapa chegar para {alvo === meuId ? "você" : nomeAlvo}, ela aparece aqui.</p>
           </div>
         ) : (
-          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} links={linksPorTarefa.get(t.id) ?? []} />)
+          naVez.map((t) => <TarefaCard key={t.id} t={t} hoje={hoje} admin={admin} pessoas={pessoas} donoId={alvo} links={linksPorTarefa.get(t.id) ?? []} />)
         )}
       </Secao>
 

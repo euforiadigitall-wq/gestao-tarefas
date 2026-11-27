@@ -3,6 +3,7 @@ import { CardQuadro } from "@/components/CardQuadro";
 import { CabecalhoLista, LinhaLista } from "@/components/LinhaLista";
 import Link from "next/link";
 import { FiltrosVisao } from "@/components/FiltrosVisao";
+import { ImportarExportar } from "@/components/ImportarExportar";
 import { comHora, descreverPrazo, hojeSP } from "@/lib/datas";
 import { filtroResponsavel } from "@/lib/responsavel";
 import { pessoaAtual, supabaseServer, usuarioAtual } from "@/lib/supabase/server";
@@ -63,6 +64,8 @@ export default async function Quadro({
   const area = sp.area && areas.some((a) => a.id === sp.area) ? sp.area : "todas";
   const lanc = sp.lanc && lancs.some((l) => l.id === sp.lanc) ? sp.lanc : "todos";
   const lista_ = sp.visao === "lista";
+  // Exporta o que está na tela: mesmos filtros do Quadro
+  const exportFiltros = [admin ? (pessoa !== "todas" ? `pessoa=${pessoa}` : "") : `pessoa=${meuId}`, cliente !== "todos" ? `cliente=${cliente}` : "", area !== "todas" ? `area=${area}` : "", lanc !== "todos" ? `lanc=${lanc}` : ""].filter(Boolean).join("&");
   const hrefVisao = (v: "colunas" | "lista") => {
     const p = new URLSearchParams();
     if (v === "lista") p.set("visao", "lista");
@@ -126,6 +129,7 @@ export default async function Quadro({
       <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
         <FiltrosVisao base="/quadro" admin={admin} pessoas={pessoas} clientes={clientes} areas={areas}
           valores={{ pessoa, cliente, area, agrupar, lanc }} padraoPessoa={padraoPessoa} lancamentos={lancs} fixos={lista_ ? { visao: "lista" } : {}} comAgrupar />
+        <ImportarExportar admin={false} filtros={exportFiltros} />
       
         <div role="tablist" aria-label="Visão do quadro" className="inline-flex rounded-lg bg-panel2 p-1">
           {([["colunas", "Colunas"], ["lista", "Lista"]] as const).map(([v, n]) => (

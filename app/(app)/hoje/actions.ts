@@ -96,6 +96,17 @@ export async function definirResponsaveis(id: string, pessoas: string[]): Promis
   return {};
 }
 
+// Admin: passa a tarefa simples para outra pessoa (troca o responsável principal).
+export async function transferirTarefa(id: string, paraId: string, manterAntigo = false): Promise<Resultado> {
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID.test(id) || !UUID.test(paraId)) return { erro: "Escolha a pessoa que vai receber a tarefa." };
+  const supabase = await supabaseServer();
+  const { error } = await supabase.rpc("transferir_tarefa", { p_tarefa: id, p_para: paraId, p_manter_antigo: manterAntigo });
+  if (error) return { erro: traduzir(error.message) };
+  revalidarTudo();
+  return {};
+}
+
 export async function adicionarLink(tarefaId: string, link: NovoLink): Promise<Resultado> {
   const p = prepararLinks([link]);
   if ("erro" in p) return p;
